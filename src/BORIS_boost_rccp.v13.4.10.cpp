@@ -3747,7 +3747,7 @@ void mcmc_UPDATE::lat_var_update(lh_SQUARE& lh_square_current_arg, double& log_l
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch ((uniform_rv <= acp_pr) & (isnan(log_lh_modified) == 0)) {
+	switch ((uniform_rv <= acp_pr) & (std::isnan(log_lh_modified) == 0)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
