@@ -6,3 +6,4 @@
 ^BORIS\.Rproj$
 ^\.git$
 ^\.gitignore$
+^\.travis\.yml$
