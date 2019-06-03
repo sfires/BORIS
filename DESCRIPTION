@@ -6,7 +6,7 @@ Date: 2019-05-17
 Author: Simon Firestone <simon.firestone@unimelb.edu.au> with contributions from Max S.Y. Lau, Saritha Kodikara, Glenn Marion, George Streftaris, Gavin Gibson, Lewis Stone, Mark Stevenson, Haydar Demirhan
 Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
 Description: Bayesian reconstruction of outbreak transmission trees integrating epidemiological and genomic data.
-License: GPL (>= 2)
+License: GPL (>= 2) | file LICENSE
 Imports: ape, coda, grDevices, Rcpp (>= 1.0.0), utils
 LinkingTo: Rcpp, BH
 SystemRequirements: C++11
