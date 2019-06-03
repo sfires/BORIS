@@ -1,0 +1,66 @@
+---
+title: "Installing BORIS"
+author: "Simon M. Firestone & Haydar Demirhan"
+date: '`r format(Sys.Date(), "%d/%m/%Y")`'
+output:
+  # rmarkdown::html_vignette:
+  #   toc: false
+  #   toc_depth: 4
+  rmarkdown::pdf_document:
+     toc: false
+     toc_depth: 4
+#rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\installation.Rmd", output_format = "all")
+vignette: >
+  %\VignetteIndexEntry{installation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo=T, warning=F, message=F,
+  collapse = TRUE, comment = "#>"
+)
+```
+
+<!-- \newpage -->
+<br><br>
+\vspace{12px}
+\vspace{12px}
+
+The `R` package `LauModel` utilises `boost` C++ libraries to generate the Markov chains for Bayesian implementation of Lau model (Lau et al., 2015; Firestone et al., 2019).
+
+To utilise `boost` and run `BORIS` from Windows and OS X binaries (i.e. `BORIS_x.x.x.zip` or `BORIS_x.x.x.tgz`), standard installation of the packages `Rcpp` and `BH` is sufficient.
+
+In this manual, we explain installation of required external tools to compile and run `BORIS` from source on Windows. Once these additional libraries are installed and the required paths are set, installation of `BORIS` should be a straightforward task.
+
+
+
+## Instructions for a Windows Computer
+
+To compile and run `BORIS` from source on a Windows computer, `Rtools` must be installed on the computer and environment variables for the system Path must be correctly specified.
+
+The important steps and tricks of installation are overviewed below. Users that need more detailed, step-by-step installation instructions are referred to the `Rtools` and `Boost` online documentation.
+
+
+### Instructions for Installing `Rtools`
+
+Install the latest frozen version of Rtools from [here](https://cran.r-project.org/bin/windows/Rtools/).
+
+The main point to be careful on is that **the installation path should not contain any spaces**. By default, it can be installed in `C:\textbackslash Rtools` on your computer.
+
+On the `Select components` page of installation, make sure that the `R toolchain` and `tools for running CMD` boxes *are checked*.
+
+On the `Select additional tasks` page make sure that the box to edit the system PATH *is checked*.
+
+Straightforward instructions are [available here](http://jtleek.com/modules/01_DataScientistToolbox/02_10_rtools/).
+
+Add the directory paths (not including any spaces) containing both R and Rtools at the top of your list of *system path* variable. 
+Go to the `Advanced system settings` on Windows and then click on `Environment Variables`, find and edit the path variable under the `System variables`. The order of the directory paths should be the same as shown below:
+
+`C:\Rtools\bin; C:\Program Files\R\R-x.x.x\bin; Additional paths`
+
+
+## References
+Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., under peer review. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. Proceedings of the Royal Society B: Biological Sciences.
+
+Lau, M. S., G. Marion, G. Streftaris and G. Gibson, 2015: A systematic Bayesian integration of epidemiological and genetic data. PLoS Comput. Biol., 11, e1004633.
