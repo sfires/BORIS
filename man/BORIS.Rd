@@ -19,7 +19,7 @@
   To install from source, requires Rtools to be installed as described in the installation vignette and also \href{http://jtleek.com/modules/01_DataScientistToolbox/02_10_rtools/}{here}.
 }
 \author{
-Simon M Firestone <simon.firestone@unimelb.edu.au>, Max S.Y. Lau, Saritha Kodikara and Haydar Demirhan, with contributions from Glenn Marion, George Streftaris, Gavin Gibson, Yoko Hayama, Takehisa Yamamoto, Toshi Tsutsui, Lewis Stone and Mark Stevenson
+Simon M. Firestone <simon.firestone@unimelb.edu.au>, Max S.Y. Lau, Saritha Kodikara and Haydar Demirhan, with contributions from Glenn Marion, George Streftaris, Gavin Gibson, Yoko Hayama, Takehisa Yamamoto, Toshi Tsutsui, Lewis Stone and Mark A. Stevenson
 
 
 Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
@@ -30,6 +30,17 @@ Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A.
 Firestone, S.M., Hayama, Y., Bradhurst, R.A., Yamamoto, T., Tsutsui, T., Stevenson, M.A., 2019. Reconstructing outbreaks: a methods comparison of transmission network models. Sci. Rep.
 
 Lau, M.S., Marion, G., Streftaris, G., Gibson, G., 2015. A systematic Bayesian integration of epidemiological and genetic data. PLoS Comput. Biol. 11, e1004633.
+
+===================================================================
+Acknowledgements:
+
+The research that led to this package development was supported by:
+1. An Australian Research Council Discovery Early Career Researcher
+Award (DE160100477)
+2. The Japanese Ministry of Agriculture, Forestry and Fisheries (Management Technologies for the Risk of Introduction of Livestock Infectious Diseases and Their Wildlife-borne Spread in Japan, FY2018-2022).
+3. Heriot-Watt University and the Scottish Government's Rural and Environment Science and Analytical Services Division (RESAS).
+4. The University of Melbourne's High Performance Computing system SPARTAN (Lafayette et al., 2016).
+===================================================================
 }
 \keyword{ package }
 \seealso{

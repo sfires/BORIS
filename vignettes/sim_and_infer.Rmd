@@ -9,6 +9,7 @@ output:
    rmarkdown::pdf_document:
      toc: true
      toc_depth: 4
+urlcolor: blue
 #rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\sim and infer.Rmd", output_format = "all")
 vignette: >
   %\VignetteIndexEntry{sim and infer}

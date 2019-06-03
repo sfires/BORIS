@@ -9,6 +9,7 @@ output:
   rmarkdown::pdf_document:
      toc: false
      toc_depth: 4
+urlcolor: blue
 #rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\installation.Rmd", output_format = "all")
 vignette: >
   %\VignetteIndexEntry{installation}
