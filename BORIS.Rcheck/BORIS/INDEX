@@ -1,0 +1,47 @@
+BORIS                   Bayesian Outbreak Reconstruction Inference and
+                        Simulation (BORIS)
+inf1                    Example 'infected_source_current.csv' output
+                        from 'infer()'.
+inf2                    Example 'infected_source_current.csv' output
+                        from 'infer()'.
+infer                   Implement SEIR MCMC inference based on
+                        epidemiological and genomic data
+infer.epi.input         Epidemiological (covariate) input data on farms
+                        in the population affected by the outbreak to
+                        be reconstructed.
+infer.moves.input       Movement (contract-tracing) input data between
+                        farms in the population affected by the
+                        outbreak to be reconstructed.
+infer.param.aux         Auxillary input parameters for configuring the
+                        MCMC used by the 'infer' function.
+infer.param.key         Initialising values for key parameters inferred
+                        with the 'infer' function.
+infer.param.priors      The prior information for parameters inferred
+                        with the 'infer' function.
+infer.param.sf          Scaling factors for key parameters inferred
+                        with the 'infer' function.
+nt.seq1                 Example 'seqs_current.csv' output from
+                        'infer()'.
+nt.t1                   Example 'seqs_t_current.csv' output from
+                        'infer()'.
+paras1                  Example 'parameters_current.log' output from
+                        'infer()'.
+paras2                  Example 'parameters_current.log' output from
+                        'infer()'.
+sim                     Simulate an outbreak with genomic data
+sim.epi.input           Epidemiological (covariate) input data on farms
+                        in the population to be simulated.
+sim.moves.input         Movement (contract-tracing) input data between
+                        farms in the population to be simulated.
+sim.param.aux           Auxillary input parameters for simulating
+                        outbreaks with the 'sim' function.
+sim.param.key           Key input parameters for simulating outbreaks
+                        with the 'sim' function.
+te1                     Example 't_e_current.csv' output from
+                        'infer()'.
+te2                     Example 't_e_current.csv' output from
+                        'infer()'.
+ti1                     Example 't_i_current.csv' output from
+                        'infer()'.
+ti2                     Example 't_i_current.csv' output from
+                        'infer()'.

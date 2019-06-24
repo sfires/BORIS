@@ -17,3 +17,6 @@ Encoding: UTF-8
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 Depends: R (>= 3.5.0)
+Packaged: 2019-06-24 03:34:08 UTC; sfirestone
+Built: R 3.6.0; x86_64-w64-mingw32; 2019-06-24 03:37:50 UTC; windows
+Archs: i386, x64

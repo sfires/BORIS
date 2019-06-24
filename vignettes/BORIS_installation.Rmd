@@ -36,7 +36,7 @@ In this manual, we explain installation of required external tools to compile an
 
 
 
-## Instructions for a Windows Computer
+## Instructions for comiling from source on a Windows Computer
 
 To compile and run `BORIS` from source on a Windows computer, `Rtools` must be installed on the computer and environment variables for the system Path must be correctly specified.
 
@@ -59,6 +59,13 @@ Add the directory paths (not including any spaces) containing both R and Rtools 
 Go to the `Advanced system settings` on Windows and then click on `Environment Variables`, find and edit the path variable under the `System variables`. The order of the directory paths should be the same as shown below:
 
 `C:\Rtools\bin; C:\Program Files\R\R-x.x.x\bin; Additional paths`
+
+
+## Instructions for comiling from source on a Mac Computer
+
+To compile and run `BORIS` from source on a Mac computer, try installing the latest version of `R`, `knitr` and `devtools`. `MacTeX` may also be required to compile the package vignettes and is available from [here](http://www.tug.org/mactex/).
+
+
 
 
 ## References

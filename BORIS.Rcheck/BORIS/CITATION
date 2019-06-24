@@ -1,0 +1,13 @@
+citHeader("To cite BORIS in publications, please use:")
+
+bibentry(bibtype = "Article",
+         author = c(person("Firestone, S.M."),
+                    person("Hayama, Y."),
+                    person("Bradhurst, R.A."),
+                    person("Yamamoto, T."),
+                    person("Tsutsui, T."),
+                    person("Stevenson, M.A.")),
+         year = "2019",
+         title = "Reconstructing outbreaks: a methods comparison of transmission network models",
+         journal = "Scientific Reports"
+)

@@ -1,0 +1,976 @@
+---
+title: "Simulation and Inference with BORIS"
+author: "Simon Firestone"
+date: '`r format(Sys.Date(), "%d/%m/%Y")`'
+output:
+  #rmarkdown::html_vignette:
+  #  toc: true
+  #  toc_depth: 4
+   rmarkdown::pdf_document:
+     toc: true
+     toc_depth: 4
+urlcolor: blue
+#rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\sim and infer.Rmd", output_format = "all")
+vignette: >
+  %\VignetteIndexEntry{sim and infer}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+\newpage
+
+## Outbreak simulation with BORIS
+
+In this example, we will:
+
+1. Prepare the inputs for simulation
+1. Simulate an outbreak with corresponding genomic data
+
+\vspace{12px}
+
+### Preparing inputs for BORIS::sim()
+
+The **farm covariate data** should be inputed as a dataframe as specified in the help for `data(sim.epi.input)`. In this example, at the start of the outbreak there is just one latently exposed individual (with `status = 2`), soon to become infectious. The rest of the individuals are susceptible (with `status = 1`). Outbreaks can be forward simulated based on data available at detection when some individuals are known to be infectious (`status = 3`) or even recovered (`status = 4`).
+
+An **animal movement/contact-tracing dataset** is required to be inputted as a dataframe as specified in the help for `data(sim.moves.input)`, irrespective of whether it is used (i.e. whether the option `parsAux$opt_mov` = 1 or = 0. This extension to the model is still under development. If `parsAux$opt_mov` is set to 0, you can just use the example dataset `data(sim.moves.input)`.
+
+\vspace{12px}
+
+```{r sim_setup1}
+library(BORIS)
+
+data(sim.epi.input)
+
+head(sim.epi.input)
+
+
+data(sim.moves.input)
+
+head(sim.moves.input)
+```
+
+\newpage
+
+Next, enter the key simulation parameters as follows. Details on the parameters can be found in the help for `data(sim.param.key)`.
+
+
+```{r sim_setup2}
+para.key <- data.frame('alpha' = 4e-4,
+                       'beta' = 0.2,
+                       'mu_1' = 2e-05,
+                       'mu_2' = 2e-06,
+                       'a' = 3.0,
+                       'b' = 2.5,
+                       'c' = 21.0,
+                       'd' = 4.0,
+                       'k_1' = 1.7,
+                       'p_ber' = 0.1,
+                       'phi_inf1' = 3,
+                       'phi_inf2' = 1.5,
+                       'rho_susc1' = 0.4,
+                       'rho_susc2' = 2,
+                       'nu_inf' = 0.2,
+                       'tau_susc'= 0.1,
+                       'beta_m'= 1.0)
+```
+
+\vspace{12px}
+
+Finally, enter some other important settings. Details on these settings can be found in the help for `data(sim.param.aux)`.
+
+\vspace{12px}
+
+```{r sim_setup3}
+pars.aux <- data.frame('n' = 100,
+                       'seed' = 2468,
+                       'n_base' = 7667,
+                       'n_seq' = 5,
+                       't_max' = 100,
+                       'unassigned_time' =  9e+6,
+                       'sample_range' = 10,
+                       'partial_seq_out' = 0,
+                       'n_base_part' = 1000,
+                       'n_index' = 1,
+                       'coord_type' = 'longlat',
+                       'kernel_type' = 'power_law',
+                       'latent_type' = 'gamma',
+                       'opt_k80' = 1,
+                       'opt_betaij' = 1,
+                       'opt_movt' = 0,
+                       'n_mov' = 60,
+                       stringsAsFactors = F)
+```
+\newpage
+
+### Simulate an outbreak with corresponding genomic data
+
+Then you are ready to run the simulation as follows:
+
+\vspace{12px}
+
+```{r sim}
+sim.out<-sim(epi.inputs = sim.epi.input, 
+             moves.inputs = sim.moves.input, 
+             parsKey = para.key,
+             parsAux = pars.aux, 
+             inputPath = "./inputs", 
+             outputPath = "./outputs")
+```
+
+\vspace{12px}
+
+This function:
+
+1. Creates input and output directories at the locations specified, or deletes everything existing in those directories.
+1. Checks the ranges of key inputs to see that they are within reasonable limits.
+1. Writes a set of intput files to the `inputPath`.
+1. Runs the simulation storing key outputs into an object `sim.out` and also writing output files to the `outputPath`.
+
+
+
+\vspace{12px}
+
+### Inspecting some of these outputs
+
+The epidemiological dataset with simulated values for timing of
+exposure, onset and end of the infectious period for each individual.
+
+\vspace{12px}
+```{r sim_out1, eval=F}
+sim.out$epi.sim[1:6,]
+```
+```{r sim_out2, echo=F}
+tmp<-sim.out$epi.sim[1:6,]
+tmp[,4:6]<-round(tmp[,4:6],4)
+tmp
+```
+
+\vspace{12px}
+
+The unique ordered identifier (i.e. k) of the simulated infected source of each individual. Those with a simulated source = 9999 have been infected from an external source.
+
+
+```{r sim_out3}
+head(sim.out$infected_source, 14)
+```
+
+\vspace{12px}
+
+Any with a simulated source = -99 have not been infected in this simulation.
+
+```{r sim_out4}
+which(sim.out$infected_source == -99)
+```
+
+\newpage
+
+The percentage of individuals in the population that were infected can be calculated as:
+
+```{r sim_out5}
+inf <- which(sim.out$infected_source != -99)
+length(inf)/length(sim.out$infected_source)
+```
+
+\vspace{12px}
+
+The percentage of *total* individuals that were simulated to have actually been sampled is returned as:
+
+```{r sim_out6}
+sim.out$sampled_perct
+```
+
+\vspace{12px}
+
+The simulated timing of sampling per individual. Those with the `unassigned_time` of 9e6 have not been sampled.
+
+```{r sim_out7}
+head(floor(sim.out$t_sample), 20)
+```
+
+\vspace{12px}
+
+The percentage of *infected* individuals that were simulated to have actually been sampled can be calculated as follows:
+
+```{r sim_out8}
+length(which(sim.out$t_sample[inf] != 9e6))/length(inf)
+```
+
+
+\newpage
+
+The sequence data itself can be found in the files `subject_x_nt.txt` with the `x` repesenting the identified (`k`) for each individual. The nucleotides bases are represented as 1=A, 2=G, 3=T, 4=C. If an individual has a sequence simulated at more than one time-point (i.e. when it was exposed, then subsequently at the time when it infected another individual(s), and the possibly again if sampled) then each simulated sequence is written to a new line, comma-separated. The times corresponding to these sequences are stored in the files `subject_x_t_nt.txt`.
+
+\vspace{12px}
+
+To write a simulated set of sequences for an individual out to FASTA using the `ape` library:  
+
+```{r sim_apeout}
+library(ape)
+
+#read in the sequences from individual k=0
+fn <- paste0(sim.out$outputPath, "subject_0_nt.txt")
+seqs1 <- as.matrix(read.csv(fn, header=F))
+
+#the sequences for this individul are stored in 19 rows
+# nucleotides are coded as 1=A, 2=G, 3=T, 4=C
+dim(seqs1)
+
+#convert the sequences to their nucleotide base letters
+seqs1[seqs1==1]<-"a"
+seqs1[seqs1==2]<-"g"
+seqs1[seqs1==3]<-"t"
+seqs1[seqs1==4]<-"c"
+
+#name the rows, which become the tip labels in the fasta file.
+#for this we will import the timings associated with each sequence
+fn <- paste0(sim.out$outputPath, "subject_0_t_nt.txt")
+seqs1_t <- as.numeric(unlist(read.table(fn)))
+
+rownames(seqs1) <- paste0("k0_", round(seqs1_t,3))
+
+#write these out to a fasta file
+library(ape)
+write.dna(seqs1, file='seqs1.fasta', format = 'fasta', nbcol = -1)
+
+#inspect snps in these data
+seq.tab <- apply(seqs1, MARGIN = 2, table)
+snp.v<-sapply(seq.tab, length)
+snps<-as.numeric(which(snp.v>1))
+seqs1[1:8,snps]
+```
+There are two similar point mutations from A -> G at roughly the same time in different locations in the genome.
+
+\newpage
+
+## Outbreak reconstruction and inference with BORIS
+
+In this example, we will:
+  
+  1. Prepare the inputs for outbreak reconstruction
+1. Run the reconstruction and inference
+1. Inspect diagnostics for the MCMC chain
+1. Produce some relevant outputs
+
+### Preparing inputs for BORIS::infer()
+
+The following inputs are required to run an outbreak reconstruction and inference:
+  
+  1. `covariates`: A data.frame including farm covariate data inputed as specified in the help for `data(infer.epi.input)`.
+1. `movements`: A data.frame including animal movement or contact-tracing data inputed as specified in the help for `data(infer.moves.input)`.
+1. `parsAux`: A data.frame including the parameters for MCMC implementation.
+1. `keyInits`: A data.frame including key initial values for parameters. 1. `priors`: A data.frame including prior settings for paramters.
+1. `scalingFactors`: A data.frame including scaling factors for parameters.
+1. `seed`: An integer seed for for the random number generator.
+1. `accTable`: A data.frame including known sources for each individual for simulated. If unknown then enter `9999` for each source.
+1. `genomic data`: A .fasta file stored on the `dnaPath`.
+1. `t_sampling`: A data.frame of the times that the specimens were collected that were sequenced to provide the genomic data.
+
+\vspace{12px}
+
+In the following example, we will wrangle the data from the previous simulation into the required format, to show the process. The code can also be adapted to empirical inputs from an observed outbreak.
+
+\newpage
+
+```{r inf_setup1}
+library(BORIS)
+
+#use the epidemiological data from the previous simulation run
+epi.data<-as.data.frame(sim.out$epi.sim)
+
+#produce the required temporal fields. Here we are assuming that 
+#onset of infectiousness typically occurs 24 hours before the 
+#first clinical signs
+epi.data$t_o <- floor(epi.data$t_i) + 1
+epi.data$t_s <- round(sim.out$t_sample, 0)
+epi.data$t_r <- round(epi.data$t_r, 0)
+
+#wrangle the farm type variables into the required format
+epi.data$ftype <- NA
+epi.data$ftype[epi.data$ftype0 == 1] <- 0
+epi.data$ftype[epi.data$ftype1 == 1] <- 1
+epi.data$ftype[epi.data$ftype2 == 1] <- 2
+
+#keep just the desired columns, re-ordered as required
+epi.data<-epi.data[,c('k','coor_x','coor_y','t_o','t_s','t_r','ftype','herdn')]
+head(epi.data)
+
+#use the movement data from previously
+moves.inputs<-sim.out$moves.inputs
+head(moves.inputs)
+```
+
+\newpage
+
+The options for configuring the MCMC implementation are setup as follows. For details see the help for `data(infer.param.aux)`.
+
+\vspace{12px}
+
+```{r inf_setup2}
+pars.aux <- data.frame('n' = nrow(epi.data),
+                       'kernel_type' = 'power_law',
+                       'coord_type' = 'longlat',
+                       't_max' = 100,
+                       'unassigned_time' =  9e+6,
+                       'processes' = 1,
+                       'n_seq' = 5,                       
+                       'n_base' = 7667,                       
+                       'n_iterations' = 1e5,
+                       'n_frequ' = 10,
+                       'n_output_source' = 1,
+                       'n_output_gm' = 1000,
+                       'n_cout' = 10,
+                       'opt_latgamma' = 1,
+                       'opt_k80' = 1,
+                       'opt_betaij' = 1,
+                       'opt_ti_update' = 1,
+                       'opt_movt' = 0,
+                       stringsAsFactors = F)
+```
+
+\vspace{12px}
+
+The initial values for key inferred parameters are setup as follows. For details see the help for `data(infer.param.key)`.
+
+\vspace{12px}
+
+```{r inf_setup3}
+para.key.inits <- data.frame('alpha' = 2e-4,
+                             'beta' = 0.1,
+                             'lat_mu' = 5,
+                             'lat_var' = 1,
+                             'c' = 10,
+                             'd' = 3,
+                             'k_1' = 3,
+                             'mu_1' = 3e-05,
+                             'mu_2' = 1e-06,
+                             'p_ber' = 0.2,
+                             'phi_inf1' = 1,
+                             'phi_inf2' = 1,
+                             'rho_susc1' = 1,
+                             'rho_susc2' = 1,
+                             'nu_inf' = 0.2,
+                             'tau_susc'= 0.1,
+                             'beta_m'= 0.5)
+```
+
+\newpage
+
+The prior information for inferred parameters are setup as follows. For details see the help for `data(infer.param.priors)`.
+
+\vspace{12px}
+
+```{r inf_setup4}
+para.priors <- data.frame('t_range' = 7,
+                          't_back' = 21,
+                          't_bound_hi' = 10,
+                          'rate_exp_prior' = 0.001,
+                          'ind_n_base_part' = 0,
+                          'n_base_part' = 1000,
+                          'alpha_hi' = 0.1,
+                          'beta_hi' = 50,
+                          'mu_lat_hi' = 50,
+                          'var_lat_lo' = 0.1,
+                          'var_lat_hi' = 50,
+                          'c_hi' = 100,
+                          'd_hi' = 100,
+                          'k_1_hi' = 100,
+                          'mu_1_hi' = 0.1,
+                          'mu_2_hi' = 0.1,
+                          'p_ber_hi' = 1.0,
+                          'phi_inf1_hi' = 500,
+                          'phi_inf2_hi' = 500,
+                          'rho_susc1_hi' = 500,
+                          'rho_susc2_hi' = 500,
+                          'nu_inf_lo' = 0,
+                          'nu_inf_hi' = 1,
+                          'tau_susc_lo' = 0,
+                          'tau_susc_hi' = 1,
+                          'beta_m_hi' = 5,
+                          'trace_window' = 20)  
+```
+
+\newpage
+
+The scaling factors (otherwise know as operators or proposal distances) for inferred parameters are setup as follows. For details see the help for `data(infer.param.sf)`. The default is 1. Increase the scaling factor to increase the proposal distance, for instance if the parameter is wandering about and accepting too often (i.e. if the proposal distance is too low). Decrease the scaling factor to decrease the proposal distance, for instance if the parameter is not being accepted often enough (i.e. if the proposal distance is too high and its trace looks like a 'Manhattan skyline'). Set the scaling factor to zero to fix a parameter at its initialising value (so that it doesn't update, such as for `beta_m` when `opt_mov = 0`).
+
+\vspace{12px}
+
+```{r inf_setup5}
+para.sf <- data.frame('alpha_sf' = 0.001,
+                      'beta_sf' = 0.5,
+                      'mu_lat_sf'	= 1.25, 
+                      'var_lat_sf' = 1.75,
+                      'c_sf' = 1.25,
+                      'd_sf' = 0.75,
+                      'k_1_sf' = 1,
+                      'mu_1_sf' = 2.5e-5,
+                      'mu_2_sf' = 2.5e-6,
+                      'p_ber_sf' = 0.02,
+                      'phi_inf1_sf' = 1.75,
+                      'phi_inf2_sf' = 1.5,
+                      'rho_susc1_sf' = 1,
+                      'rho_susc2_sf' = 1.25,
+                      'nu_inf_sf' = 0.25,
+                      'tau_susc_sf' = 0.25,
+                      'beta_m_sf' = 1)
+```
+
+\newpage
+
+### Preparing the genomic data for BORIS::infer()
+
+
+Genomic data can simply be written to the  `dnaPath` as a .fasta file prepared with the `ape` library or other phylogenetic software.
+
+Here, we use the simulated outbreak data to show how to utilise the genomes produced earlier.
+
+
+First, use the sampling times data from the simulation. Those not sampled have the unassigned value.
+
+Then identify and store the data from sequences at the time of sampling on each sampled farm. Other sequences are from the times when transmission events occurred and are typically unobserved.
+
+\vspace{12px}
+
+```{r inf_setup6}
+t_sample <- sim.out$t_sample
+
+#which individuals are missing genomes and which were sampled
+no.genome <- which(t_sample == pars.aux$unassigned_time)  
+genome.sampled <- which(t_sample != pars.aux$unassigned_time)  
+
+#the sampling times of those with genomes
+round(t_sample[-no.genome], 3)
+
+#setup a matrix to hold 1 sequence per individual or missing data
+seq_mat<-matrix(nrow=nrow(epi.data), ncol=pars.aux$n_base)
+
+#identify and store the data from sequences at the time of sampling 
+#the next step takes approximately 30 seconds to run
+for(i in 1:nrow(epi.data)){
+  k <- i-1
+  if(i %in% no.genome){
+    #these are not used, given t.sample for these = the unassigned time
+    #n denotes any base (in the IUPAC system)
+    seq_mat[i,]<-rep("n", pars.aux$n_base)
+  }else{
+    #identify the closest corresponding sample to the time of 
+    #sampling for each sampled individual
+    fn<-paste0(sim.out$outputPath,"subject_",k,"_t_nt.txt")
+    ts<-as.numeric(unlist(read.csv(fn, header=F)))
+    tsamp <- which.min(abs(ts - t_sample[i]))
+    #read in the corresponding nucleotide sequence
+    fn<-paste0(sim.out$outputPath,"subject_",k,"_nt.txt")
+    nts<-read.csv(fn, header = F, stringsAsFactors = F)
+    #store the closest corresponding sample for this individual
+    seq_mat[i,]<-as.numeric(nts[tsamp,])
+  }
+  if((i%%2) == 0) {cat(".",sep=""); flush.console()}  #
+} 
+```
+
+\vspace{12px}
+
+Finalise the sequence data and write it to a *.fasta file.
+
+
+```{r inf_setup7}
+
+#convert the sequence data to their nucleotide base letters
+seq_mat[seq_mat==1]<-"a"
+seq_mat[seq_mat==2]<-"g"
+seq_mat[seq_mat==3]<-"t"
+seq_mat[seq_mat==4]<-"c"
+
+#write row.names to the sequence matrix object, including the 'k' 
+#and time of sampling. These will be used as tip labels
+row.names(seq_mat)<- paste0(epi.data$k, "_", epi.data$t_s)
+
+
+if(!dir.exists("gen_inputs")) {
+      dir.create("gen_inputs")
+    } 
+
+
+#write these out to a fasta file in the dnaPath directory
+library(ape)
+write.dna(seq_mat, file='./gen_inputs/seqs.fasta', format = 'fasta', nbcol = -1)
+
+```
+
+
+
+
+\newpage
+
+### Running the reconstruction and inference
+
+Here we just run one MCMC chain for a very small number of iterations (for demonstration purposes only), whereas in practice multiple chains must be run and inspected appropriately (i.e. for burn-in, convergence and serial autocorrelation) before any inferences are made on the transmission tree or any inferred parameters.
+
+As the accuracy table (accTable) for evaluating how well the infer is performing, we will use the known infected sources from our prior simulation that generated these data. When inferring for an actual outbreak, it will be unknown which is the true source for each infected individual. In that case, enter `9999` for all infected sources.
+
+
+
+\vspace{12px}
+
+```{r inf_run1, eval=F}
+pars.aux$n_iterations = 1000
+
+infer.out<-infer(covariates = epi.data,
+                 moves.inputs = moves.inputs,
+                 parsAux = pars.aux, 
+                 keyInits = para.key.inits,
+                 priors = para.priors, 
+                 scalingFactors = para.sf, 
+                 seed = 1,
+                 accTable = sim.out$infected_source,
+                 t.sample = sim.out$t_sample,
+                 inputPath = "./inputs", 
+                 outputPath = "./outputs", 
+                 dnaPath = "./gen_inputs")
+```
+
+\vspace{12px}
+
+Multiple chains can be run:
+
+1. on a single computer: by saving the output from the first run to a new directory, because when `infer()` starts it deletes everything in the input and output directories. Then running again with a different seed.
+1. on a SLURM cluster or similar: adapt the following code, then use `.seed` as the `seed` argument for the function `infer()`:
+
+\vspace{12px}
+
+```{r inf_run2, eval=F}
+task.id <- as.numeric(Sys.getenv('SLURM_ARRAY_TASK_ID'))
+task.id
+
+.seed <- c(1, 102, 1003, 10004)[task.id]
+.seed
+```
+
+\newpage
+
+### Diagnostics and outputs from multiple MCMC chains
+
+Following the MCMC run, it is important to check and exclude burn-in appropriately, and for appropriate mixing and convergence of multiple chains.  `Tracer` (http://beast.community/tracer) is a great tool for rapidly evaluating the parameter output of chains, as stored in the file `parameters_current.log`. It allows rapid assessment of convergence of each parameter across multiple chains, effective sample sizes, amount of autocorrelation, and also reading off summary posterior estimates.
+
+
+Here we will implement some similar analyses in `R`, then continue with code for extracting posterior estimates of the transmission tree and further inferred parameters for each individual. 
+
+In the last example, we just ran a single chain. The following uses example data from 2 chains of the same inference, each of length 10,000 MCMC cycles. Again, this is for illustative purposes only, in practice hundreds of thousands to millions of iterations are typically required as these are complex inferences.
+
+\vspace{12px}
+
+#### Inspecting the chains
+
+Inspect the start of the chains to evaluate if and when convergence has occurred. Therefore, where to set burn-in, and if need be the amount of thinning.
+
+Pre-prepared parameter data for each chain have been inputted by reading in the tab delimited `parameters_current.log` files produced by independantly seeded `infer()` runs on the same input data.
+
+\vspace{12px}
+
+```{r inf_post_chain1}
+library(BORIS)
+data(paras1)
+data(paras2)
+
+burnin=0
+thin = 1
+end=1e04
+
+x<-seq(burnin+1,end,thin)
+
+
+par(mfrow=c(2,2))
+plot(x, paras1$alpha[x], type='l', col='#ff000060', 
+     ylim=c(0,0.01), 
+     xlab='iteration', ylab=expression(alpha), cex.lab=1.4)
+lines(x, paras2$alpha[x], col='#0000ff60')
+
+plot(x, paras1$beta[x], type='l', col='#ff000060',
+     xlab='iteration', ylab=expression(beta),
+     cex.lab=1.4)
+lines(x, paras2$beta[x], col='#0000ff60')
+
+plot(x, paras1$mu_1[x], type='l', col='#ff000060',
+     xlab='iteration', ylab=expression(mu[1]),
+     cex.lab=1.4)
+lines(x, paras2$mu_1[x], col='#0000ff60')
+
+plot(x, paras1$p_ber[x], type='l', col='#ff000060',
+     xlab='iteration', ylab=expression(p[ber]),
+     cex.lab=1.4)
+lines(x, paras2$p_ber[x], col='#0000ff60')
+
+```
+
+In this example, the two chains for `alpha` appear to converge very quickly then mix well with most posterior samples between 0 and 0.02.
+
+The chains for `beta` are looking like they are soon to converge, however there are two patterns here that indicate **poor mixing** to be aware of if they persist longer into traces. In the first 2000 iterations, both traces for `beta` appear to have a rate of acceptance that is too low. A typical cause of such a pattern is that the scaling factor (or proposal distance) is too large. In this case, however, this is unlikely to be the cause as this mixing pattern self-corrects. Between iterations 4000 and 10000 the traces wander about (another poor mixing pattern), and it appears the rate of acceptance is now too  high. In this example, this is just because we haven't run enough iterations, and the chains can still be considered to be burning-in. Possible solutions to such poor mixing patterns could include running the MCMC for more iterations or altering the respective scaling factor (proposal distance).
+
+The traces for `mu_1` initially converge before the 500th iteration, then there is a sizeable jump to a lower posterior estimate in one chain, followed by the other, with convergence achieved after 2000 iterations. 
+
+The traces for the parameter `p_ber` also converge by around 2000 iterations.
+
+
+\newpage
+
+In this example, we will use a burn-in of 5000 iterations, and given little indication of serial autocorrelation will not thin the estimates. 
+
+The posterior parameter estimates can thus be derived as follows:
+
+```{r inf_post_chain2}
+burnin=5000
+thin = 1
+end=1e04
+x<-seq(burnin+1,end,thin)
+
+paras<-rbind(paras1[x,], paras2[x,])
+
+#posterior estimates for alpha
+round(quantile(paras$alpha, probs=c(0.5, 0.025, 0.975)), 4)
+
+#posterior estimates for beta
+round(quantile(paras$beta, probs=c(0.5, 0.025, 0.975)), 3)
+
+#posterior estimates for c
+round(quantile(paras$c, probs=c(0.5, 0.025, 0.975)), 2)
+
+#posterior estimates for d
+round(quantile(paras$d, probs=c(0.5, 0.025, 0.975)), 3)
+
+#posterior estimates for mu_1
+quantile(paras$mu_1, probs=c(0.5, 0.025, 0.975))
+
+#posterior estimates for mu_2
+quantile(paras$mu_2, probs=c(0.5, 0.025, 0.975))
+```
+
+\newpage
+
+Density plots produced for each parameter of interest:
+
+\vspace{12px}
+
+```{r inf_post_chain3}
+plot(density(paras1$alpha[x]), col='red', cex.main=2, 
+  main=expression(paste(plain("Density of "),alpha,plain(", by run"))))
+lines(density(paras2$alpha[x]), col='blue')
+```
+
+\newpage
+
+#### Inferred infected sources
+
+Pre-prepared infected source data for each chain have been inputted by reading in the comma separated `infected_source_current.csv` files produced by independantly seeded `infer()` runs on the same input data.
+
+Let's inspect the `head` and `tail` of each of these datasets:
+
+\vspace{12px}
+
+```{r inf_post_sources1}
+data(inf1)
+head(inf1[,1:10])
+tail(inf1[,1:10])
+
+data(inf2)
+head(inf2[,1:10])
+tail(inf2[,1:10])
+```
+\newpage
+
+Using the same burn-in as previously decided:
+
+\vspace{12px}
+
+```{r inf_post_sources2}
+burnin=5000
+thin = 1
+end=1e04
+x<-seq(burnin+1,end,thin)
+
+#create lists that store for each individual:
+#- a frequence table of iterations featuring each infected source (inf.l)
+#- the source with the highest modal posterior support (inf.mode.l)
+#- the posterior support for each infected source (inf.support.l)
+inf.l<-list()
+inf.mode.l<-numeric()
+inf.support.l<-numeric()
+for(i in 1:nrow(epi.data)){  
+  inf.l[[i]]<-table(c(inf1[x,i], inf2[x,i]))
+  inf.mode.l[i]<-as.numeric(attr(which.max(inf.l[[i]]), 'names'))
+  inf.support.l[i]<-
+    as.numeric(inf.l[[i]][which.max(inf.l[[i]])]/sum(inf.l[[i]]))
+}
+
+#inspect these outputs for individual k=6 
+inf.l[[2]]
+inf.mode.l[2]
+inf.support.l[2]
+```
+\newpage
+
+The highest modal posterior support can be combined into an edgelist:
+
+```{r inf_post_sources3}
+el<-data.frame(to=1:nrow(epi.data), from=inf.mode.l)
+
+head(el)
+```
+
+And compared to the inputted `accTable`:
+  
+```{r inf_post_sources4}
+#from the simulation
+accTable <- sim.out$infected_source
+
+#which are correctly inferred
+acc <- ifelse(accTable == el$from, 1, 0)
+acc
+
+#number correct
+sum(acc)
+
+round(sum(acc)/length(el$from),2)
+```
+
+The accuracy for those with consensus support or better can be estimated as follows:
+  
+```{r inf_post_sources5}
+nsup<-length(which(inf.support.l>0.5))
+nsup
+
+#proportion of individuals with an inferred source with consensus support
+round(nsup/nrow(epi.data),2)
+
+#accuracy for the inferred sources of these individuals only
+round(sum(acc[inf.support.l>0.5])/nsup, 2)
+```
+
+Noting that this inference needs to be run for around 100,000 MCMC iterations for the tree to converge and these example data are based on only 10000 iterations.
+
+
+\newpage
+
+#### Inferred key timings
+
+Pre-prepared data on the inferred timing of exposured of each individual for each iteration in each chain have been inputted by reading in the comma separated `t_e_current.csv` files produced by independantly seeded `infer()` runs on the same input data.
+
+
+```{r inf_post_timings1}
+data(te1)
+round(head(te1[,1:10]), 3)
+round(tail(te1[,1:10]), 3)
+
+data(te2)
+round(head(te2[,1:10]), 3)
+round(tail(te2[,1:10]), 3)
+```
+
+Again we'll use the same burn-in parameters. This time collating lists with posterior median estimates of the day of exposure for each individual with 95% Bayesian credible intervals.
+
+```{r inf_post_timings2}
+burnin=5000
+thin = 1
+end=1e04
+x<-seq(burnin+1,end,thin)
+
+te.l<-list()
+te.q.l<-list()
+for(i in 1:nrow(epi.data)){  
+  te.l[[i]]<-c(te1[x,i], te2[x,i])
+  te.q.l[[i]]<-quantile(te.l[[i]], probs=c(0.5, 0.025, 0.975))
+}
+
+#inspecting some of the inferred exposure timings
+round(te.q.l[[1]], 2)
+round(te.q.l[[2]], 2)
+round(te.q.l[[3]], 2)
+```
+
+Pre-prepared data on the inferred timing of onset of infectiousness of each individual for each iteration in each chain have been inputted by reading in the comma separated `t_i_current.csv` files produced by independantly seeded `infer()` runs on the same input data.
+
+
+```{r inf_post_timings3}
+data(ti1)
+round(head(ti1[,1:10]), 3)
+round(tail(ti1[,1:10]), 3)
+
+data(ti2)
+round(head(ti2[,1:10]), 3)
+round(tail(ti2[,1:10]), 3)
+```
+
+\newpage
+
+Again we'll use the same burn-in parameters. This time collating lists with posterior median estimates of the day of onset of infectousness for each individual with 95% Bayesian credible intervals.
+
+\vspace{12px}
+
+```{r inf_post_timings4}
+burnin=5000
+thin = 1
+end=1e04
+x<-seq(burnin+1,end,thin)
+
+ti.l<-list()
+ti.q.l<-list()
+for(i in 1:nrow(epi.data)){  
+  ti.l[[i]]<-c(ti1[x,i], ti2[x,i])
+  ti.q.l[[i]]<-quantile(ti.l[[i]], probs=c(0.5, 0.025, 0.975))
+}
+
+#inspecting some of the inferred exposure timings
+round(ti.q.l[[1]], 2)
+round(ti.q.l[[2]], 2)
+round(ti.q.l[[3]], 2)
+```
+
+\newpage
+
+#### Inferred sequences
+
+A sequence is recorded (in every iteration) whenever an individual is infected, sampled or when it infects another individual. So each individual can have a different number of sequences recorded from other individuals, even from itself in different iterations.
+
+Each iteration, the timing of recorded sequences is captured in the output file `seqs_t_current_csv` with 1 row per individual, comma-separated.
+
+\vspace{12px}
+
+```{r inf_post_seqs_1}
+data(nt.t1)
+
+head(nt.t1)
+
+nt.t.l<-apply(nt.t1, MARGIN=1, 
+              FUN = function(x) as.numeric(unlist(strsplit(x, ","))))
+
+# the timings corresponding to the sequences for the first three individuals
+# in the first iteration
+nt.t.l[[1]]
+nt.t.l[[2]]
+nt.t.l[[3]]
+
+# the timings corresponding to the sequences for the first
+# individual in the first three iterations
+nt.t.l[[pars.aux$n*0+1]]
+nt.t.l[[pars.aux$n*1+1]]
+nt.t.l[[pars.aux$n*2+1]]
+
+#this indiviual was sampled at
+t.sample<-round(sim.out$t_sample, 0)
+t.sample[1]
+```
+
+\vspace{12px}
+
+For instance in the above example, in the first iteration, the first individual was infected at t=0, then infected 3 further individuals at times t = 1.24, 1.91 and 3.06 days, and was sampled at t=3.00 days.
+
+\newpage
+
+The number of sequences per individual, per iteration, can thus be derived as:
+  
+```{r inf_post_seqs_2}
+nt.size<-sapply(nt.t.l, length)
+
+nt.size[[pars.aux$n*0+1]]
+nt.size[[pars.aux$n*1+1]]
+nt.size[[pars.aux$n*2+1]]
+```
+
+
+As can the total number of sequences, and then the sequence sets recorded per iteration, which is used to lookup specific sequences:
+  
+```{r inf_post_seqs_3}
+#total number of sequences recorded
+sum(nt.size)
+
+#matrix to hold number of sequences per individual (column) per iteration (row)
+nt.size.mat<-matrix(nt.size, byrow = T, ncol=pars.aux$n)
+nt.size.mat[1:2,1:10]
+
+#total number of sequences stored per iteration
+nt.size.mat.sizes <- apply(nt.size.mat, MARGIN = 1, FUN = sum)
+nt.size.mat.sizes
+```
+
+This can then be used to lookup specific inferred sequences, per iteration, per individual. 
+
+The corresponding inferred sequences are stored in the file `seqs_current.csv`.
+
+```{r inf_post_seqs_4}
+data(nt.seq1)
+
+#1 sequence per row, corresponding to the timings in nt.t1
+dim(nt.seq1)
+```
+
+\newpage
+
+For the first individual in the first iteration, the 5 sequences are stored as:
+  
+```{r inf_post_seqs_5}
+nt.size[[1]]
+nt.seq1[1:5,1:10]
+```
+
+\vspace{12px}
+
+For the second individual in the first iteration, the 3 sequences are stored as follows:
+  
+```{r inf_post_seqs_6}
+nt.size[[1]]
+nt.size[[2]]
+nt.seq1[6:8,1:10]
+```
+
+\vspace{12px}
+
+For the second individual in the second iteration, there are 5 sequences recorded:
+  
+```{r inf_post_seqs_7}
+nt.size[[pars.aux$n*1+2]]
+```
+
+And these start at row 287 in the sequence data, i.e.:
+  
+```{r inf_post_seqs_8}
+#count sequences in the first iteration
+.row.nos <- nt.size.mat.sizes[1]
+#add sequences for the first individual in the 2nd iteration
+.row.nos <- .row.nos + nt.size[[pars.aux$n*1+1]]
+#count sequences for the second individual in the 2nd iteration
+.row.nos <- .row.nos + 1:(nt.size[[pars.aux$n*1+2]])
+.row.nos
+
+nt.seq1[.row.nos,1:10]
+```
+
+\newpage
+
+For the second individual in the third iteration, there are 4 sequences recorded:
+  
+```{r inf_post_seqs_9}
+nt.size[[pars.aux$n*2+3]]
+```
+
+And these start at row 572 in the sequence data, i.e.:
+  
+```{r inf_post_seqs_10}
+#count sequences in the earlier iterations
+.row.nos <- sum(nt.size.mat.sizes[1:2])
+#add sequences for the first individual in the 3nd iteration
+.row.nos <- .row.nos + nt.size[[pars.aux$n*2+1]]
+#count sequences for the second individual in the 3nd iteration
+.row.nos <- .row.nos + 1:(nt.size[[pars.aux$n*2+2]])
+.row.nos
+
+nt.seq1[.row.nos,1:10]
+```
+
+\vspace{12px}
