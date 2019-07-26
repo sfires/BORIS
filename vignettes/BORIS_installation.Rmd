@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo=T, warning=F, message=F,
 \vspace{12px}
 \vspace{12px}
 
-The `R` package `LauModel` utilises `boost` C++ libraries to generate the Markov chains for Bayesian implementation of Lau model (Lau et al., 2015; Firestone et al., 2019).
+The `R` package `BORIS` utilises `boost` C++ libraries to generate the Markov chains for Bayesian implementation of the Lau model (see Lau et al., 2015 and [github.com/msylau](https://github.com/msylau/A-Systematic-Bayesian-Integration-of-Epidemiological-and-Genetic-Data)) with modifications (Firestone et al., 2019).
 
 To utilise `boost` and run `BORIS` from Windows and OS X binaries (i.e. `BORIS_x.x.x.zip` or `BORIS_x.x.x.tgz`), standard installation of the packages `Rcpp` and `BH` is sufficient.
 
@@ -61,14 +61,26 @@ Go to the `Advanced system settings` on Windows and then click on `Environment V
 `C:\Rtools\bin; C:\Program Files\R\R-x.x.x\bin; Additional paths`
 
 
+
+
+
 ## Instructions for comiling from source on a Mac Computer
 
 To compile and run `BORIS` from source on a Mac computer, try installing the latest version of `R`, `knitr` and `devtools`. `MacTeX` may also be required to compile the package vignettes and is available from [here](http://www.tug.org/mactex/).
 
 
+## Instructions for Installing `BORIS` from GitHub
+
+Once all of the above has been setup, `BORIS` can be installed from the GitHub repository `https://github.com/sfires/BORIS` with the following `R` code:
+
+`install_github("sfires/BORIS", build_opts = c("--resave-data", "--no-manual"), build_vignettes = TRUE)`
+
+Note: `knitr` and `rmarkdown` are recommended packages for building the package vignettes.
 
 
 ## References
 Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., under peer review. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. Proceedings of the Royal Society B: Biological Sciences.
 
 Lau, M. S., G. Marion, G. Streftaris and G. Gibson, 2015: A systematic Bayesian integration of epidemiological and genetic data. PLoS Comput. Biol., 11, e1004633.
+
+[https://github.com/msylau/A-Systematic-Bayesian-Integration-of-Epidemiological-and-Genetic-Data](https://github.com/msylau/A-Systematic-Bayesian-Integration-of-Epidemiological-and-Genetic-Data)

@@ -31,6 +31,9 @@ Firestone, S.M., Hayama, Y., Bradhurst, R.A., Yamamoto, T., Tsutsui, T., Stevens
 
 Lau, M.S., Marion, G., Streftaris, G., Gibson, G., 2015. A systematic Bayesian integration of epidemiological and genetic data. PLoS Comput. Biol. 11, e1004633.
 
+The current implementation is a wrap-up of the original scripts, with further modifications, available \href{https://github.com/msylau/A-Systematic-Bayesian-Integration-of-Epidemiological-and-Genetic-Data}{here}.
+
+
 ===================================================================
 
 Acknowledgements:

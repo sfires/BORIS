@@ -1,11 +1,11 @@
 Package: BORIS
 Type: Package
 Title: Bayesian Outbreak Reconstruction Inference and Simulation
-Version: 1.1.1
-Date: 2019-06-24
+Version: 1.1.2
+Date: 2019-07-26
 Author: Simon Firestone <simon.firestone@unimelb.edu.au> with contributions from Max S.Y. Lau, Saritha Kodikara, Haydar Demirhan, Yoko Hayama, Takehisa Yamamoto, Toshiyuki Tsutsui, Gavin Gibson, Glenn Marion, George Streftaris, Lewis Stone, Mark Stevenson
 Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
-Description: Bayesian reconstruction of outbreak transmission trees integrating epidemiological and genomic data. Implementation of the approaches described in Lau et al (2015) <https://doi.org/10.1371/journal.pcbi.1004633> and Firestone et al (2019) <https://www.nature.com/articles/s41598-019-41103-6>.
+Description: Bayesian reconstruction of outbreak transmission trees integrating epidemiological and genomic data. Implementation of the approaches described in Lau et. al. (2015) <doi:10.1371/journal.pcbi.1004633> and Firestone et. al. (2019) <doi:10.1038/s41598-019-41103-6>.
 License: GPL (>= 2) | file LICENSE
 Imports: ape, coda, grDevices, Rcpp (>= 1.0.0), utils
 LinkingTo: Rcpp, BH
