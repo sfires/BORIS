@@ -25,10 +25,10 @@ infer.checkInputs <- function(parsAux , keyInits , priors , scalingFactors, seed
   # ---------------------------------------------------------- #
   if ((keyInits[1, "alpha"] < 0 ) ){ stop("Initial value for the background (primary) transmission rate of infection, alpha, must be positive!")}
   if ((keyInits[1, "beta"] <= 0 ) | (keyInits[1, "beta"] > 10 )){ stop("Initial value for the secondary transmission rate, beta, must be in between 0 and 30!")}
-  if ((keyInits[1, "lat_mu"] <= 0 ) | (keyInits[1, "lat_mu"] > 30 )){ stop("Initial value for the mean of the duration of the farm-level latent period, lat_mu,  must be in between 0 and 30!")}
-  if ((keyInits[1, "lat_var"] <= 0 ) | (keyInits[1, "lat_var"] > 30 )){ stop("Initial value for the variance of the duration of the farm-level latent period, lat_var, must be in between 0 and 30!")}
-  if ((keyInits[1, "c"] <= 0 ) | (keyInits[1, "c"] > 60 )){ stop("Initial value for the scale parameter of the Weibull distribution representing the mean infectious period, c, must be in between 0 and 60!")}
-  if ((keyInits[1, "d"] <= 0 ) | (keyInits[1, "d"] > 60 )){ stop("Initial value for the shape parameter of the Weibull distribution representing the mean infectious period, d, must be in between 0 and 60!")}
+  if ((keyInits[1, "lat_mu"] <= 0 ) | (keyInits[1, "lat_mu"] > 100 )){ stop("Initial value for the mean of the duration of the farm-level latent period, lat_mu,  must be in between 0 and 100!")}
+  if ((keyInits[1, "lat_var"] <= 0 ) | (keyInits[1, "lat_var"] > 100 )){ stop("Initial value for the variance of the duration of the farm-level latent period, lat_var, must be in between 0 and 100!")}
+  if ((keyInits[1, "c"] <= 0 ) | (keyInits[1, "c"] > 3650 )){ stop("Initial value for the scale parameter of the Weibull distribution representing the mean infectious period, c, must be in between 0 and 3650!")}
+  if ((keyInits[1, "d"] <= 0 ) | (keyInits[1, "d"] > 100 )){ stop("Initial value for the shape parameter of the Weibull distribution representing the mean infectious period, d, must be in between 0 and 100!")}
   if ((keyInits[1, "k_1"] <= 0 ) | (keyInits[1, "k_1"] > 10 )){ stop("Initial value for the spatial transmission kernel shape parameter, k_1, must be in between 0 and 10!")}
   if ((keyInits[1, "mu_1"] <= 0 ) | (keyInits[1, "mu_1"] > 1.00E-02 )){ stop("Initial value for the rate of transition mutations based on Kimura's 2 parameter nucleotide substitution model (Kimura, 1980), mu_1, must be in between 0 and 0.01!")}
   if ((keyInits[1, "mu_2"] <= 0 ) | (keyInits[1, "mu_2"] > 1.00E-02 )){ stop("Initial value for the rate of transversion mutations based on Kimura's 2 parameter nucleotide substitution model (Kimura, 1980), mu_2, must be in between  0 and 0.01!")}
@@ -53,7 +53,7 @@ infer.checkInputs <- function(parsAux , keyInits , priors , scalingFactors, seed
   if ((priors[1, "mu_lat_hi"] <= 0 ) | (priors[1, "mu_lat_hi"] > 100 )){ stop("The upper bound for the parameter mu_lat_hi must be in between (0, 100]!")}
   if ((priors[1, "var_lat_lo"] <= 0 ) | (priors[1, "var_lat_lo"] > 10 )){ stop("The lower bound for parameter var_lat_lo must be in between (0, 10]!")}
   if ((priors[1, "var_lat_hi"] <= 0 ) | (priors[1, "var_lat_hi"] > 100 )){ stop("The upper bound for the parameter var_lat_hi must be in between (0, 100]!")}
-  if ((priors[1, "c_hi"] <= 0 ) | (priors[1, "c_hi"] > 1000 )){ stop("The upper bound for the parameter c_hi must be in between (0, 10]!")}
+  if ((priors[1, "c_hi"] <= 0 ) | (priors[1, "c_hi"] > 3650 )){ stop("The upper bound for the parameter c_hi must be in between (0, 3650]!")}
   if ((priors[1, "k_1_hi"] <= 0 ) | (priors[1, "k_1_hi"] > 1000 )){ stop("The upper bound for the parameter k_1_hi must be in between (0, 10]!")}
   if ((priors[1, "mu_1_hi"] <= 0 ) | (priors[1, "mu_1_hi"] > 1000 )){ stop("The upper bound for the parameter mu_1_hi must be in between (0, 10]!")}
   if ((priors[1, "mu_2_hi"] <= 0 ) | (priors[1, "mu_2_hi"] > 1000 )){ stop("The upper bound for the parameter mu_2_hi must be in between (0, 10]!")}
