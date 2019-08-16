@@ -3,7 +3,7 @@ title: "Simulation and Inference with BORIS"
 author: "Simon Firestone"
 date: '`r format(Sys.Date(), "%d/%m/%Y")`'
 output:
-  #rmarkdown::html_vignette:
+#  rmarkdown::html_vignette:
   #  toc: true
   #  toc_depth: 4
    rmarkdown::pdf_document:
@@ -275,7 +275,7 @@ The following inputs are required to run an outbreak reconstruction and inferenc
 
 \vspace{12px}
 
-In the following example, we will wrangle the data from the previous simulation into the required format, to show the process. The code can also be adapted to empirical inputs from an observed outbreak.
+In the following example, we will wrangle the data from the previous simulation into the required format, to show the process. The code can also be adapted to empirical inputs from an observed outbreak. Or run from the stored example input data pointed to in the help, i.e. `data(infer.epi.input)`.
 
 \newpage
 
@@ -301,6 +301,33 @@ epi.data$ftype[epi.data$ftype2 == 1] <- 2
 #keep just the desired columns, re-ordered as required
 epi.data<-epi.data[,c('k','coor_x','coor_y','t_o','t_s','t_r','ftype','herdn')]
 head(epi.data)
+```
+
+\newpage
+
+```{r inf_setup2}
+#for each individual propose an initial source for the tree used to initialised the MCMC inference
+
+#this could be assigned manually based on available information and/or opinion. Or, as in the below example randomly sampled from those individuals with earlier onset times than each individual.
+
+epi.data$initial_source<-NA
+
+for (i in 1:nrow(epi.data)){
+
+  epi.data$k[i]
+  
+  #identify the pool of possible sources with earlier onset times
+  pool_source<- epi.data$k [which(epi.data$t_o<epi.data$t_o[i] & epi.data$t_r>epi.data$t_o[i])]
+
+  #randomly assign an infection source is there are any in the pool
+  if (length(pool_source)>1) epi.data$initial_source[i] <- sample(pool_source,1) 
+  if (length(pool_source)==1) epi.data$initial_source[i] <- pool_source[1] 
+  
+  #otherwise assign 9999 as the initial source, to indicate that it is either external to the dataset or unknown
+  if (length(pool_source)<1) epi.data$initial_source[i] <- 9999
+
+}
+epi.data$initial_source
 
 #use the movement data from previously
 moves.inputs<-sim.out$moves.inputs
@@ -313,7 +340,7 @@ The options for configuring the MCMC implementation are setup as follows. For de
 
 \vspace{12px}
 
-```{r inf_setup2}
+```{r inf_setup3}
 pars.aux <- data.frame('n' = nrow(epi.data),
                        'kernel_type' = 'power_law',
                        'coord_type' = 'longlat',
@@ -341,7 +368,7 @@ The initial values for key inferred parameters are setup as follows. For details
 
 \vspace{12px}
 
-```{r inf_setup3}
+```{r inf_setup4}
 para.key.inits <- data.frame('alpha' = 2e-4,
                              'beta' = 0.1,
                              'lat_mu' = 5,
@@ -367,7 +394,7 @@ The prior information for inferred parameters are setup as follows. For details 
 
 \vspace{12px}
 
-```{r inf_setup4}
+```{r inf_setup5}
 para.priors <- data.frame('t_range' = 7,
                           't_back' = 21,
                           't_bound_hi' = 10,
@@ -403,7 +430,7 @@ The scaling factors (otherwise know as operators or proposal distances) for infe
 
 \vspace{12px}
 
-```{r inf_setup5}
+```{r inf_setup6}
 para.sf <- data.frame('alpha_sf' = 0.001,
                       'beta_sf' = 0.5,
                       'mu_lat_sf'	= 1.25, 
@@ -439,7 +466,7 @@ Then identify and store the data from sequences at the time of sampling on each 
 
 \vspace{12px}
 
-```{r inf_setup6}
+```{r inf_setup7}
 t_sample <- sim.out$t_sample
 
 #which individuals are missing genomes and which were sampled
@@ -481,7 +508,7 @@ for(i in 1:nrow(epi.data)){
 Finalise the sequence data and write it to a *.fasta file.
 
 
-```{r inf_setup7}
+```{r inf_setup8}
 
 #convert the sequence data to their nucleotide base letters
 seq_mat[seq_mat==1]<-"a"

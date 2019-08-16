@@ -68,7 +68,7 @@ Lau, M.S., Marion, G., Streftaris, G., Gibson, G., 2015. A systematic Bayesian i
 }
 
 \author{
-Simon Firestone, Max S.Y. Lau, Haydar Demirhan
+Simon Firestone, Max S.Y. Lau, Haydar Demirhan, Saritha Kodikara
 
 Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
 }

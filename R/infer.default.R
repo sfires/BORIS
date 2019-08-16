@@ -135,25 +135,27 @@ infer.default <- function(covariates = NULL,
   epi.data$ftype2 <- 0
   epi.data$ftype2[epi.data$ftype == 2] <- 1
 
-  #infected source
-  for (i in 1:nrow(epi.data)){
-    #define pool of possible sources
-    pool_source<- epi.data$k [which(epi.data$t_i<=epi.data$t_e[i] & epi.data$t_r>epi.data$t_e[i])]  
-    # randomly assign a infection source
-    if (length(pool_source)>1) epi.data$infected_source[i] <- sample(pool_source,1) 
-    if (length(pool_source)==1) epi.data$infected_source[i] <- pool_source[1] 
-    # background
-    if (length(pool_source)<1) epi.data$infected_source[i] <- 9999 
-  }
-  # uninfected get -99
-  id <- which(epi.data$t_e == parsAux$unassigned_time)
-  epi.data$infected_source[id]<- -99
-  
+  #initial source
+  # for (i in 1:nrow(epi.data)){
+  #   #define pool of possible sources
+  #   pool_source<- epi.data$k [which(epi.data$t_i<=epi.data$t_e[i] & epi.data$t_r>epi.data$t_e[i])]  
+  #   # randomly assign an infection source
+  #   if (length(pool_source)>1) epi.data$initial_source[i] <- sample(pool_source,1) 
+  #   if (length(pool_source)==1) epi.data$initial_source[i] <- pool_source[1] 
+  #   # background
+  #   if (length(pool_source)<1) epi.data$initial_source[i] <- 9999 
+  # }
+  # # uninfected get -99
+  # id <- which(epi.data$t_e == parsAux$unassigned_time)
+  # epi.data$initial_source[id]<- -99
+  epi.data$initial_source[is.na(epi.data$initial_source)]<-9999
+    
+    
   #reorder columns
   epi.data <- epi.data[,c("k", "coor_x", "coor_y", 
                           "t_e", "t_i", "t_r",
                           "ftype0", "ftype1", "ftype2", 
-                          "herdn", "infected_source")]
+                          "herdn", "initial_source")]
   
   write.table(epi.data, paste0(inputPath, "/epi.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F,col.names = TRUE)
 
@@ -201,7 +203,7 @@ infer.default <- function(covariates = NULL,
   
 
   ##index.txt
-  index <- which(epi.data$infected_source == 9999) - 1
+  index <- which(epi.data$initial_source == 9999) - 1
   index <- c('k', index)
   index.out<-matrix(index, nrow=length(index))
   write.table(index.out[1:2,], paste0(inputPath, "/index.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)

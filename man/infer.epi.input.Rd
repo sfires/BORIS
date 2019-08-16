@@ -23,6 +23,7 @@ This data set provides an example of the inputs on the population of farms housi
     \item{t_r}{Day removed, recovered or culled, if known or the unassigned value (default \code{9e06}) if unknown.}
     \item{ftype}{A 3-level categorical variable used to represent farm type, here, in terms of the predominant susceptible species held, i.e. ftype = 0 if predominant species is cattle,  ftype = 1 if predominant species is pigs, ftype = 2 if predominant species is sheep/other. This variable is later converted into an indicator variable.}
     \item{herdn}{Number of susceptible animals held on the farm at the start of the outbreak.}
+    \item{initial_source}{Initialising source of infection for each farm for the tree used to initialise the MCMC inference. '9999' implies an external/unknown source based on the data available. See vignette for an example of how to produce this.}
   }
 }
 

@@ -64,7 +64,7 @@ Sellke, T., 1983. On the asymptotic distribution of the size of a stochastic epi
 }
 
 \author{
-  Simon Firestone, Max S.Y. Lau, Haydar Demirhan
+  Simon Firestone, Max S.Y. Lau, Haydar Demirhan, Saritha Kodikara
   
   Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
 }
