@@ -34,7 +34,7 @@ sim.checkInputs <- function(parsKey , parsAux){
   if ( sum(parsAux[1, "latent_type"] == c("gamma") ) == 0 )  { stop("Distribution type used for simulating the latent period presently only allows 'gamma'!")}
   if (!(parsAux[1, "opt_k80"] == 0 | parsAux[1, "opt_k80"] == 1)){ stop("Implementation option opt_k80 must be either 0 or 1!")}
   if (!(parsAux[1, "opt_betaij"] == 0 | parsAux[1, "opt_betaij"] == 1)){ stop("Implementation option opt_betaij must be either 0 or 1!")}
-  if (!(parsAux[1, "opt_movt"] == 0 | parsAux[1, "opt_movt"] == 1)){ stop("Implementation option opt_movt must be either 0 or 1!")}
+  if (!(parsAux[1, "opt_mov"] == 0 | parsAux[1, "opt_mov"] == 1)){ stop("Implementation option opt_movt must be either 0 or 1!")}
   if (!is.numeric(parsAux[1, "n_mov"]) | (parsAux[1, "n_mov"] < 1 )){ stop("The maximum possible number of animal movements or contacts, n_mov, must be a positive number, presently limited to 10,000!")}  
 
 }

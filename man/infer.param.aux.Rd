@@ -32,7 +32,7 @@ This data set is an example of the additional parameter inputs that configure th
     \item{opt_k80}{Implementation option: 1 \eqn{=} reformulated K80 DNA substitution model to match original 1980 paper (0 \eqn{=} original version in Lau et al. (2015) based on a secondary reference).}
     \item{opt_betaij}{Implementation option: 1 \eqn{=} farm-level covariates incorporated into beta, i.e. \eqn{\beta_{ij}} Lau modified model from Firestone et al. (2019b) (0 \eqn{=} originally implemented model from Lau et al. (2015).}
     \item{opt_ti_update}{Implementation option: 1 \eqn{=} update timing of inferred onset of infectivity (0 \eqn{=} in Lau original implementation based on simulated data, see Supporting Information in Lau et al. (2015)).}
-  \item{opt_movt}{Implementation option under development: 1 \eqn{=} animal movements/contact-tracing incorporated into likelihood estimation with inferred parameter \eqn{\beta_m} (0 \eqn{=} originally implemented model from Lau et al. (2015).}
+  \item{opt_mov}{Implementation option under development: 1 \eqn{=} animal movements/contact-tracing incorporated into likelihood estimation with inferred parameter \eqn{\beta_m} (0 \eqn{=} originally implemented model from Lau et al. (2015).}
 }
 }
 
@@ -54,7 +54,7 @@ This data set is an example of the additional parameter inputs that configure th
                          'opt_k80' = 1,
                          'opt_betaij' = 1,
                          'opt_ti_update' = 1,
-                         'opt_movt' = 0,
+                         'opt_mov' = 0,
                          stringsAsFactors = FALSE)
 }
 

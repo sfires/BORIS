@@ -98,7 +98,7 @@ Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
                          'opt_k80' = 1,
                          'opt_betaij' = 1,
                          'opt_ti_update' = 1,
-                         'opt_movt' = 0,
+                         'opt_mov' = 0,
                          stringsAsFactors = FALSE)
  
  # Initial values for the key parameters                     

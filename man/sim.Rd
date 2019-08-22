@@ -108,7 +108,7 @@ Sellke, T., 1983. On the asymptotic distribution of the size of a stochastic epi
                          'latent_type' = 'gamma',
                          'opt_k80' = 1,
                          'opt_betaij' = 1,
-                         'opt_movt' = 0,
+                         'opt_mov' = 0,
                          'n_mov' = 60,
                          stringsAsFactors = FALSE)  
 

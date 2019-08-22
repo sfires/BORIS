@@ -30,7 +30,7 @@ This data set is an example of the additional parameter inputs that shape the ou
     \item{latent_type}{Distribution type used for simulating the latent period. Presently only implemented for "\code{gamma}"}
     \item{opt_k80}{Implementation option: 1 \eqn{=} reformulated K80 DNA substitution model to match original 1980 paper (0 \eqn{=} original version in Lau et al. (2015) based on a secondary reference).}
     \item{opt_betaij}{Implementation option: 1 \eqn{=} farm-level covariates incorporated into beta, i.e. \eqn{\beta_{ij}} Lau modified model from Firestone et al. (2019) (0 \eqn{=} originally implemented model from Lau et al. (2015).}
-    \item{opt_movt}{Implementation option (under development): 1 \eqn{=} utilise animal movement/contact-tracing data in the simulation (0 \eqn{=} Lau et al. (2015) original implementation)
+    \item{opt_mov}{Implementation option (under development): 1 \eqn{=} utilise animal movement/contact-tracing data in the simulation (0 \eqn{=} Lau et al. (2015) original implementation)
 }
     \item{n_mov}{number of animal movements or contacts in the inputted data \code{\link{sim.moves.input}}}
   }
@@ -52,7 +52,7 @@ This data set is an example of the additional parameter inputs that shape the ou
                          'latent_type' = 'gamma',
                          'opt_k80' = 1,
                          'opt_betaij' = 1,
-                         'opt_movt' = 0,
+                         'opt_mov' = 0,
                          'n_mov' = 60,
                          stringsAsFactors = FALSE) 
 }
