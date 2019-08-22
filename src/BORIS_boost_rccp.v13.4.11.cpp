@@ -119,7 +119,9 @@ struct para_key_init {
 
 struct para_priors_etc {
 	double t_range; // for update of t_i; t_i would range between [t_o - t_range, t_o + range] (see paper SI)
-	double t_back; // assume a max length for the latent period 
+	double t_back; // for update of t_e; 
+						//t_up = min(t_sample_arg.at(subject_proposed), min(t_i_arg.at(subject_proposed), t_max_CUPDATE));
+						//t_low = max(0.0, t_up - para_priors_arg.t_back);
 	double t_bound_hi; // t_bound used when proposing initial sources, t_i of infectee must be within t_bound_hi days of proposed t_i of j (essentially the upper bound of the generation interval). For FMD: mean = 6.1; sd=4.6 (Haydon, 2003).
 	double rate_exp_prior;// the rate of exp to be used as vague prior
 	int ind_n_base_part;// =1 if the seq data is partial
@@ -691,7 +693,7 @@ void IO_para_mov(mov_struct&, para_aux_struct&);
 
 double func_kernel_sim(double, double, double, double, double, string, string); // function prototype for calculating kernel distance
 
-
+double func_latent_ran(rng_type & rng_arg, double par_1, double par_2);
 
 void initialize_beta_ij_mat(vector< vector<double> >&, para_aux_struct&, epi_struct_sim&, para_key_struct&);
 
@@ -713,6 +715,7 @@ double rnorm_sim(double mean, double sd, rng_type& rng_arg);
 //double rexp_sim(double rate, rng_type& rng_arg);
 int edf_sample_sim(vector<double> vec, rng_type& rng_arg);
 //--------------------------
+
 
 
 
@@ -747,7 +750,7 @@ void IO_para_aux(para_aux& para_other_arg) { // this function is called to
 			if ((line_count == 1) & (field_count == 5)) fs >> para_other_arg.np;
 			if ((line_count == 1) & (field_count == 6)) fs >> para_other_arg.n_seq;
 			if ((line_count == 1) & (field_count == 7)) {
-				switch (ind_n_base_part == 1) {
+				switch (int(ind_n_base_part == 1)) {
 				case 0: {
 					fs >> para_other_arg.n_base;
 					break;
@@ -1280,6 +1283,7 @@ void IO_parascalingfactors(para_scaling_factors& para_scaling_factors_arg) { // 
 
 
 
+
 /*----------------------------*/
 /*- functions ----------------*/
 /*----------------------------*/
@@ -1515,7 +1519,18 @@ inline double func_moves_cnt(int i_arg, int j_arg, moves_struct& moves_arg, vect
 
 	}
 
+	//time independant
+	if (opt_mov == 2) {
 
+		for (int m = 0; m <= (int)(moves_arg.from_k.size() - 1); m++) {
+			if ((moves_arg.from_k[m] == i_arg) && (moves_arg.to_k[m] == j_arg)) {
+
+				moves_ij_count++;
+
+			}
+		}
+
+	}
 
 	return(moves_ij_count);
 }
@@ -1530,7 +1545,7 @@ void FUNC::initialize_delta_mat_mov(vector< vector<double> >& delta_mat_mov_arg,
 
 			for (int j = 0; j <= (int)(xi_I_Clh.size() - 1); j++) {
 
-				switch (t_r_Clh.at(xi_I_Clh.at(j)) > t_max_Clh) {
+				switch (int(t_r_Clh.at(xi_I_Clh.at(j)) > t_max_Clh)) {
 				case 1: { // not yet recovered
 					delta_mat_mov_arg[xi_U_Clh.at(i)][xi_I_Clh.at(j)] = 0.0;
 					for (int m = 0; m <= (int)(mov_arg.from_k.size() - 1); m++) {
@@ -1582,7 +1597,7 @@ void FUNC::initialize_delta_mat_mov(vector< vector<double> >& delta_mat_mov_arg,
 
 				if (t_i_Clh.at(xi_I_Clh.at(j)) < t_e_Clh.at(xi_E_minus_Clh.at(i))) {
 
-					switch (t_r_Clh.at(xi_I_Clh.at(j)) >= t_e_Clh.at(xi_E_minus_Clh.at(i))) {
+					switch (int(t_r_Clh.at(xi_I_Clh.at(j)) >= t_e_Clh.at(xi_E_minus_Clh.at(i)))) {
 					case 1: { // not yet recovered at e_i
 						delta_mat_mov_arg[xi_E_minus_Clh.at(i)][xi_I_Clh.at(j)] = 0.0;
 						for (int m = 0; m <= (int)(mov_arg.from_k.size() - 1); m++) {
@@ -1644,7 +1659,7 @@ inline double lh_snull(const vector<int>& con_seq, const vector<int>& seq, const
 	int m = 0;
 
 	for (int i = 0; i <= (n_base - 1); i++) {
-		switch (seq.at(i) != con_seq.at(i)) {
+		switch (int(seq.at(i) != con_seq.at(i))) {
 		case 1: { // a change
 			m = m + 1;
 			break;
@@ -1669,7 +1684,7 @@ inline double lh_snull_base(const int& con_base, const int& base, const double& 
 
 	int m = 0;
 
-	switch (base != con_base) {
+	switch (int(base != con_base)) {
 	case 1: { // a change
 		m = m + 1;
 		break;
@@ -1697,7 +1712,7 @@ inline void sample_snull(const vector<int>& con_seq, vector<int>& seq_proposed, 
 		int base_proposed = 0;// any output of 0 would indicate a mistake
 
 
-		switch (ber_trial == 1) {
+		switch (int(ber_trial == 1)) {
 		case 1: { // randomly choose one among other 3
 			switch (con_seq.at(j)) {
 			case 1: {
@@ -1807,7 +1822,7 @@ void seq_propose_cond(vector<int>& seq_proposed, double& log_pr_forward, const v
 
 	for (int i = 0; i <= (n_base - 1); i++) {
 
-		switch (nt_past_forward.at(i) == nt_future_forward.at(i)) {
+		switch (int(nt_past_forward.at(i) == nt_future_forward.at(i))) {
 
 		case 0: { // not the same
 
@@ -2055,7 +2070,7 @@ void seq_backward_pr_cond(const vector<int>& seq_proposed_backward, double& log_
 		case 0: {// not three bases are the same
 			m = m + 1;
 
-			switch (seq_proposed_backward.at(i) == nt_future_backward.at(i)) {
+			switch (int(seq_proposed_backward.at(i) == nt_future_backward.at(i))) {
 			case 1: {// it is the same as future base but not the same as past (i.e.,a change)
 				dn = dn + 1;
 				break;
@@ -2382,8 +2397,8 @@ double log_lh_func(lh_SQUARE lh_square_arg, int n_arg) {
 	for (int i = 0; i <= (n_arg - 1); i++) {
 		log_lh_value = log_lh_value + lh_square_arg.log_f_Snull.at(i) + lh_square_arg.log_f_S.at(i) + log(lh_square_arg.f_U.at(i)) + log(lh_square_arg.f_E.at(i)) + log(lh_square_arg.f_I.at(i)) + log(lh_square_arg.f_R.at(i)) + log(lh_square_arg.f_EnI.at(i)) + log(lh_square_arg.f_InR.at(i));
 		//if (debug == 1) {
-			//Rcpp::Rcout << log_lh_value << ", " << lh_square_arg.log_f_Snull.at(i) << ", " << lh_square_arg.log_f_S.at(i) << ", " << log(lh_square_arg.f_U.at(i)) << ", " << log(lh_square_arg.f_E.at(i)) << ", " << log(lh_square_arg.f_I.at(i)) << ", " << log(lh_square_arg.f_R.at(i)) << ", " << log(lh_square_arg.f_EnI.at(i)) << ", " << log(lh_square_arg.f_InR.at(i)) << endl;
-			//Rcpp::Rcout << "test n: " << n_arg << ", i+1:" << i + 1 << ", lh:" << log_lh_value << endl;
+			//cout << log_lh_value << ", " << lh_square_arg.log_f_Snull.at(i) << ", " << lh_square_arg.log_f_S.at(i) << ", " << log(lh_square_arg.f_U.at(i)) << ", " << log(lh_square_arg.f_E.at(i)) << ", " << log(lh_square_arg.f_I.at(i)) << ", " << log(lh_square_arg.f_R.at(i)) << ", " << log(lh_square_arg.f_EnI.at(i)) << ", " << log(lh_square_arg.f_InR.at(i)) << endl;
+			//cout << "test n: " << n_arg << ", i+1:" << i + 1 << ", lh:" << log_lh_value << endl;
 			//cin.get();
 		//}
 	}
@@ -2423,7 +2438,7 @@ void FUNC::initialize_delta_mat(vector< vector<double> >& delta_mat_arg) {
 
 			for (int j = 0; j <= (int)(xi_I_Clh.size() - 1); j++) {
 
-				switch (t_r_Clh.at(xi_I_Clh.at(j)) > t_max_Clh) {
+				switch (int(t_r_Clh.at(xi_I_Clh.at(j)) > t_max_Clh)) {
 				case 1: { // not yet recovered
 					delta_mat_arg[xi_U_Clh.at(i)][xi_I_Clh.at(j)] = t_max_Clh - t_i_Clh.at(xi_I_Clh.at(j));
 					break;
@@ -2448,7 +2463,7 @@ void FUNC::initialize_delta_mat(vector< vector<double> >& delta_mat_arg) {
 
 				if (t_i_Clh.at(xi_I_Clh.at(j)) < t_e_Clh.at(xi_E_minus_Clh.at(i))) {
 
-					switch (t_r_Clh.at(xi_I_Clh.at(j)) >= t_e_Clh.at(xi_E_minus_Clh.at(i))) {
+					switch (int(t_r_Clh.at(xi_I_Clh.at(j)) >= t_e_Clh.at(xi_E_minus_Clh.at(i)))) {
 					case 1: { // not yet recovered at e_i
 						delta_mat_arg[xi_E_minus_Clh.at(i)][xi_I_Clh.at(j)] = t_e_Clh.at(xi_E_minus_Clh.at(i)) - t_i_Clh.at(xi_I_Clh.at(j));
 						break;
@@ -2539,11 +2554,17 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 				if (opt_mov == 1) {
 					lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i)) = lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i)) = lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i)) + func_moves_cnt(xi_I_Clh.at(j), xi_U_Clh.at(i), moves_arg, t_e_Clh, t_i_Clh, t_r_Clh, para_priors_arg);
+				}
 
 			}
 
 			lh_square_arg.q_T.at(xi_U_Clh.at(i)) = alpha_Clh * t_max_Clh + beta_Clh * lh_square_arg.kt_sum_U.at(xi_U_Clh.at(i));
 			if (opt_mov == 1) {
+				lh_square_arg.q_T.at(xi_U_Clh.at(i)) = lh_square_arg.q_T.at(xi_U_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_arg.q_T.at(xi_U_Clh.at(i)) = lh_square_arg.q_T.at(xi_U_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i));
 			}
 
@@ -2559,7 +2580,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 
 		int k_E = xi_E_Clh.at(i);
 
-		switch (nt_data_arg.current_size.at(k_E) > 1) {
+		switch (int(nt_data_arg.current_size.at(k_E) > 1)) {
 
 		case 1: {
 
@@ -2584,7 +2605,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 		}
 
 		//--
-		switch (infected_source_Clh.at(k_E) == 9999) {
+		switch (int(infected_source_Clh.at(k_E) == 9999)) {
 		case 1: {
 			// 			lh_square_arg.log_f_Snull.at(k_E) = n_base_Clh*log(0.25); // assume background infection gives a random sequence from stationary dist of seq
 			vector<int> seq(nt_data_arg.nt[k_E].begin(), nt_data_arg.nt[k_E].begin() + n_base_Clh); // the first seq
@@ -2639,6 +2660,10 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 						lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i)) + delta_t_mov;
 					}
 
+					if (opt_mov == 2) {
+						lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i)) + func_moves_cnt(xi_I_Clh.at(j), xi_E_minus_Clh.at(i), moves_arg, t_e_Clh, t_i_Clh, t_r_Clh, para_priors_arg);
+					}
+
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
 
 
@@ -2673,6 +2698,11 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 					lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i)) = moves_ij_t;
 					lh_square_arg.g_E.at(xi_E_minus_Clh.at(i)) = beta_Clh * lh_square_arg.k_sum_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i));
 				}
+				if (opt_mov == 2) {
+					double moves_ij_t = func_moves_cnt(infected_source_Clh.at(xi_E_minus_Clh.at(i)), xi_E_minus_Clh.at(i), moves_arg, t_e_Clh, t_i_Clh, t_r_Clh, para_priors_arg);
+					lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i)) = moves_ij_t;
+					lh_square_arg.g_E.at(xi_E_minus_Clh.at(i)) = beta_Clh * lh_square_arg.k_sum_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i));
+				}
 
 
 				break;
@@ -2683,6 +2713,9 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 
 			lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = alpha_Clh * t_e_Clh.at(xi_E_minus_Clh.at(i)) + beta_Clh * lh_square_arg.kt_sum_E.at(xi_E_minus_Clh.at(i));
 			if (opt_mov == 1) {
+				lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i));
 			}
 
@@ -2702,7 +2735,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 			//lh_square_arg.f_I.at(xi_I_Clh.at(i)) = gsl_ran_gamma_pdf(t_i_Clh.at(xi_I_Clh.at(i)) - t_e_Clh.at(xi_I_Clh.at(i)), a_Clh, b_Clh);
 			lh_square_arg.f_I.at(xi_I_Clh.at(i)) = func_latent_pdf(t_i_Clh.at(xi_I_Clh.at(i)) - t_e_Clh.at(xi_I_Clh.at(i)), lat_mu_Clh, lat_var_Clh);
 			//if (debug == 1) {
-			//	Rcpp::Rcout << ": " << i << ", t_i - t_e = " << t_i_Clh.at(xi_I_Clh.at(i)) - t_e_Clh.at(xi_I_Clh.at(i)) << ", f_I = " << lh_square_arg.f_I.at(xi_I_Clh.at(i)) << endl;
+			//	cout << ": " << i << ", t_i - t_e = " << t_i_Clh.at(xi_I_Clh.at(i)) - t_e_Clh.at(xi_I_Clh.at(i)) << ", f_I = " << lh_square_arg.f_I.at(xi_I_Clh.at(i)) << endl;
 			//}
 		}
 	}
@@ -2810,7 +2843,7 @@ void mcmc_UPDATE::mu_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 		int k_E = xi_E_arg.at(i);
 
-		switch (nt_data_arg.current_size.at(k_E) > 1) {
+		switch (int(nt_data_arg.current_size.at(k_E) > 1)) {
 
 		case 1: {
 
@@ -2872,7 +2905,7 @@ void mcmc_UPDATE::mu_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -2958,7 +2991,7 @@ void mcmc_UPDATE::mu_2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 		int k_E = xi_E_arg.at(i);
 
-		switch (nt_data_arg.current_size.at(k_E) > 1) {
+		switch (int(nt_data_arg.current_size.at(k_E) > 1)) {
 
 		case 1: {
 
@@ -3023,7 +3056,7 @@ void mcmc_UPDATE::mu_2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3087,7 +3120,7 @@ void mcmc_UPDATE::p_ber_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 		int k_E = xi_E_arg.at(i);
 
-		switch (infected_source_current_arg.at(k_E) == 9999) {
+		switch (int(infected_source_current_arg.at(k_E) == 9999)) {
 
 		case 1: {//bg infection
 
@@ -3117,7 +3150,7 @@ void mcmc_UPDATE::p_ber_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3206,6 +3239,9 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 			if (opt_mov == 1) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
+			if (opt_mov == 2) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)),1.0);
 			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
@@ -3243,6 +3279,10 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 			if (opt_mov == 1) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
+			if (opt_mov == 2) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)),1.0);
 			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
@@ -3260,7 +3300,7 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3322,6 +3362,9 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 			if (opt_mov == 1) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
+			if (opt_mov == 2) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)),1.0);
 			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
@@ -3350,6 +3393,9 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 				if (opt_mov == 1) {
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+				}
 
 				break;
 			}
@@ -3359,6 +3405,9 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + beta_proposed * lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -3384,7 +3433,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3505,7 +3554,7 @@ void mcmc_UPDATE::beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3620,7 +3669,7 @@ void mcmc_UPDATE::lat_mu_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3841,7 +3890,7 @@ void mcmc_UPDATE::c_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -3927,7 +3976,7 @@ void mcmc_UPDATE::d_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		log_lh_current_arg = log_lh_modified;
@@ -4046,12 +4095,18 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4104,6 +4159,9 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
 
 			//lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha + para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
@@ -4130,7 +4188,10 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m * lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
-
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m * lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -4142,6 +4203,9 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4163,7 +4227,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		kernel_mat_current_arg = kernel_mat_modified;
@@ -4280,10 +4344,16 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4322,6 +4392,9 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
@@ -4345,6 +4418,11 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
+
 					break;
 				}
 
@@ -4355,6 +4433,9 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4375,7 +4456,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -4495,12 +4576,18 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4538,7 +4625,9 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
-
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
 
@@ -4560,6 +4649,10 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -4571,6 +4664,9 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4592,7 +4688,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -4709,11 +4805,17 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4751,7 +4853,9 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
-
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
 
@@ -4773,6 +4877,10 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -4784,6 +4892,9 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4804,7 +4915,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -4924,11 +5035,17 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4966,6 +5083,9 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
 
@@ -4987,6 +5107,10 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -4998,6 +5122,9 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5017,7 +5144,7 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -5138,11 +5265,17 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
 
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -5180,6 +5313,9 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
@@ -5202,6 +5338,10 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -5213,6 +5353,9 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5233,7 +5376,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -5353,12 +5496,18 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 				if (opt_mov == 1) {
 					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + delta_t_mov;
 				}
+				if (opt_mov == 2) {
+					lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_U_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+				}
 
 
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -5396,6 +5545,9 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + delta_t_mov;
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i)) + func_moves_cnt(xi_I_arg.at(j), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					}
 
 
 				} // end of if (t_i_Clh.at(xi_I_Clh.at(j))<t_e_Clh.at(xi_E_Clh.at(i)))
@@ -5418,6 +5570,10 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
+					}
 
 					break;
 				}
@@ -5429,6 +5585,9 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
 			if (opt_mov == 1) {
+				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
+			}
+			if (opt_mov == 2) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5449,7 +5608,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		beta_ij_mat_current_arg = beta_ij_mat_modified;
@@ -5573,7 +5732,7 @@ void mcmc_UPDATE::con_seq_update(lh_SQUARE& lh_square_current_arg, double& log_l
 
 		int k_E = xi_E_arg.at(i);
 
-		switch (infected_source_current_arg.at(k_E) == 9999) {
+		switch (int(infected_source_current_arg.at(k_E) == 9999)) {
 
 		case 1: {//bg infection
 
@@ -5606,7 +5765,7 @@ void mcmc_UPDATE::con_seq_update(lh_SQUARE& lh_square_current_arg, double& log_l
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 
 		lh_square_current_arg = lh_square_modified;
@@ -5770,7 +5929,7 @@ void mcmc_UPDATE::seq_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 	int base_next_subject = 0;
 
-	switch (current_size_arg.at(subject_proposed) > 1) {
+	switch (int(current_size_arg.at(subject_proposed) > 1)) {
 
 	case 1: {
 		//--
@@ -5826,7 +5985,7 @@ void mcmc_UPDATE::seq_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 		base_before_source = nt_current_arg[subject_source][(rank_source - 1)*n_base_CUPDATE + position_proposed];
 
-		switch (current_size_arg.at(subject_source) > (rank_source + 1)) {
+		switch (int(current_size_arg.at(subject_source) > (rank_source + 1))) {
 		case 1: {// there  is a valid base_next_source
 			base_next_source = nt_current_arg[subject_source][(rank_source + 1)*n_base_CUPDATE + position_proposed];
 
@@ -5875,7 +6034,7 @@ void mcmc_UPDATE::seq_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 
 		lh_square_current_arg = lh_square_modified;
@@ -5932,7 +6091,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 
 
-	switch (infecting_size_current_arg.at(subject_proposed) >= 1) {
+	switch (int(infecting_size_current_arg.at(subject_proposed) >= 1)) {
 	case 1: {
 		double min_t = t_e_arg.at(infecting_list_current_arg[subject_proposed][0]); // the minimum t_e among all those exposures being infected by the subject; as infecting_list is sorted according to the order of infecting, the first one is the minimum
 
@@ -5992,7 +6151,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 		log_lh_modified = log_lh_modified - log(lh_square_modified.f_U.at(xi_U_arg.at(j))); //subtract part of likelihood that would be updated below
 
 
-		switch (t_r_arg.at(subject_proposed) >= t_max_CUPDATE) {
+		switch (int(t_r_arg.at(subject_proposed) >= t_max_CUPDATE)) {
 		case 1: {
 			delta_mat_modified[xi_U_arg.at(j)][subject_proposed] = t_max_CUPDATE - t_proposed;
 
@@ -6047,6 +6206,10 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				+ delta_mat_mov_modified[xi_U_arg.at(j)][subject_proposed];
 		}
 
+		if (opt_mov == 2) {
+			lh_square_modified.movest_sum_U.at(xi_U_arg.at(j)) = lh_square_modified.movest_sum_U.at(xi_U_arg.at(j));//no change
+		}
+
 		lh_square_modified.q_T.at(xi_U_arg.at(j)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(j));
 
 		lh_square_modified.f_U.at(xi_U_arg.at(j)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(j)));
@@ -6061,13 +6224,13 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 		if (xi_E_minus_arg.at(j) != subject_proposed) {
 
-			switch ((t_e_arg.at(xi_E_minus_arg.at(j)) > t_proposed)) {
+			switch (int(t_e_arg.at(xi_E_minus_arg.at(j)) > t_proposed)) {
 
 			case 1: {
 
 				log_lh_modified = log_lh_modified - log(lh_square_modified.f_E.at(xi_E_minus_arg.at(j))); //subtract part of likelihood that would be updated below
 
-				switch (t_r_arg.at(subject_proposed) >= t_e_arg.at(xi_E_minus_arg.at(j))) {
+				switch (int(t_r_arg.at(subject_proposed) >= t_e_arg.at(xi_E_minus_arg.at(j)))) {
 				case 1: {
 					delta_mat_modified[xi_E_minus_arg.at(j)][subject_proposed] = t_e_arg.at(xi_E_minus_arg.at(j)) - t_proposed;
 
@@ -6099,7 +6262,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				}
 
 
-				switch ((t_e_arg.at(xi_E_minus_arg.at(j)) > t_i_arg.at(subject_proposed))) {
+				switch (int(t_e_arg.at(xi_E_minus_arg.at(j)) > t_i_arg.at(subject_proposed))) {
 				case 1: {
 
 					if (opt_betaij == 0) {
@@ -6115,6 +6278,9 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) - delta_mat_mov_current_arg[xi_E_minus_arg.at(j)][subject_proposed] + delta_mat_mov_modified[xi_E_minus_arg.at(j)][subject_proposed];
+					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)); //no change
 					}
 
 					break;
@@ -6134,6 +6300,9 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) + delta_mat_mov_modified[xi_E_minus_arg.at(j)][subject_proposed];
 					}
+					if (opt_mov == 3) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)); // no change
+					}
 
 					break;
 				}
@@ -6142,6 +6311,9 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(j)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j));
 				if (opt_mov == 1) {
+					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
+				}
+				if (opt_mov == 2) {
 					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
 				}
 
@@ -6164,7 +6336,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				delta_mat_modified[xi_E_minus_arg.at(j)][subject_proposed] = 0.0;
 				delta_mat_mov_modified[xi_E_minus_arg.at(j)][subject_proposed] = 0.0;
 
-				switch ((t_e_arg.at(xi_E_minus_arg.at(j)) > t_i_arg.at(subject_proposed))) {
+				switch (int(t_e_arg.at(xi_E_minus_arg.at(j)) > t_i_arg.at(subject_proposed))) {
 				case 1: {
 					if (opt_betaij == 0) {
 						lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j)) - delta_mat_current_arg[xi_E_minus_arg.at(j)][subject_proposed] * kernel_mat_current_arg[xi_E_minus_arg.at(j)][subject_proposed] / norm_const_current_arg.at(subject_proposed);
@@ -6178,6 +6350,9 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) - delta_mat_mov_current_arg[xi_E_minus_arg.at(j)][subject_proposed];
 					}
+					if (opt_mov == 2) {
+						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)); //no change
+					}
 
 					break;
 				}
@@ -6189,6 +6364,9 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(j)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j));
 				if (opt_mov == 1) {
+					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
+				}
+				if (opt_mov == 2) {
 					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
 				}
 
@@ -6253,7 +6431,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		delta_mat_current_arg = delta_mat_modified;
@@ -6630,23 +6808,23 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 	vector<int> nt_future_backward(n_base_CUPDATE);
 	//
 
-	switch (subject_source == 9999) {
+	switch (int(subject_source == 9999)) {
 	case 0: { // NOT from background
 
-		switch (current_size_arg.at(subject_proposed) > 1) { // return 1 when the subject has more than one sequence available
+		switch (int(current_size_arg.at(subject_proposed) > 1)) { // return 1 when the subject has more than one sequence available
 
 		case 0: { //  ONLY one sequence available for the subject
 
-			switch (dt >= 0) {
+			switch (int(dt >= 0)) {
 			case 1: { // propose the time to the right
 
-				switch (rank_source_x == rank_source_y) {
+				switch (int(rank_source_x == rank_source_y)) {
 
 				case 1: { // unchanged rank_source
 					nt_past_forward = nt_current_seq;
 					t_past = t_e_arg.at(subject_proposed);
 
-					switch (rank_source_y == (current_size_arg.at(subject_source) - 1)) { // see if the sequence is the last one
+					switch (int(rank_source_y == (current_size_arg.at(subject_source) - 1))) { // see if the sequence is the last one
 					case 1: { // it is the last sequence
 						t_future = t_proposed;
 						seq_propose_uncond(seq_proposed, log_pr_forward, nt_past_forward, t_proposed, t_past, t_future, para_current_arg.mu_1, para_current_arg.mu_2, n_base_CUPDATE, rng);// no defined nt_future_forward
@@ -6704,7 +6882,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 					t_past = t_nt_modified_source.at(rank_source_y - 1);
 
 
-					switch (rank_source_y == (current_size_arg.at(subject_source) - 1)) { // see if the sequence is the last one
+					switch (int(rank_source_y == (current_size_arg.at(subject_source) - 1))) { // see if the sequence is the last one
 					case 1: { // it is the last sequence
 						t_future = t_proposed;
 						seq_propose_uncond(seq_proposed, log_pr_forward, nt_past_forward, t_proposed, t_past, t_future, para_current_arg.mu_1, para_current_arg.mu_2, n_base_CUPDATE, rng);// no defined nt_future_forward
@@ -6762,7 +6940,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 			case 0: {  // propose the time to the left
 
-				switch (rank_source_x == rank_source_y) {
+				switch (int(rank_source_x == rank_source_y)) {
 
 				case 1: { // unchanged rank_source
 
@@ -6778,7 +6956,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 					//------------------------------------------------//
 
-					switch (rank_source_x == (current_size_arg.at(subject_source) - 1)) { // see if the (original) sequence was the last one
+					switch (int(rank_source_x == (current_size_arg.at(subject_source) - 1))) { // see if the (original) sequence was the last one
 
 					case 0: { // it was not the last sequence
 						t_past_backward = t_proposed;
@@ -6831,7 +7009,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 					//------------------------------------------------//
 
-					switch (rank_source_x == (current_size_arg.at(subject_source) - 1)) { // see if the (original) sequence was the last one
+					switch (int(rank_source_x == (current_size_arg.at(subject_source) - 1))) { // see if the (original) sequence was the last one
 
 					case 0: { // it was not the last sequence
 
@@ -6882,16 +7060,16 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 		case 1: { //  MORE than one sequence available for the subject
 
-			switch (dt >= 0) {
+			switch (int(dt >= 0)) {
 			case 1: { // propose the time to the right
 
-				switch (rank_source_x == rank_source_y) {
+				switch (int(rank_source_x == rank_source_y)) {
 
 				case 1: { // unchanged rank_source
 					nt_past_forward = nt_current_seq;
 					t_past = t_e_arg.at(subject_proposed);
 
-					switch (rank_source_y == (current_size_arg.at(subject_source) - 1)) { // see if the sequence is the last one (on source)
+					switch (int(rank_source_y == (current_size_arg.at(subject_source) - 1))) { // see if the sequence is the last one (on source)
 					case 1: { // it is the last sequence
 
 						//t_future = t_proposed;
@@ -6924,7 +7102,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 					}
 					case 0: { // not the last sequence
 
-						switch (t_nt_modified_source.at(rank_source_y + 1) < t_nt_modified_subject.at(1)) {
+						switch (int(t_nt_modified_source.at(rank_source_y + 1) < t_nt_modified_subject.at(1))) {
 						case 1: {
 							t_future = t_nt_modified_source.at(rank_source_y + 1);
 							nt_future_forward.assign(nt_current_arg.at(subject_source).begin() + (rank_source_y + 1)*n_base_CUPDATE, nt_current_arg.at(subject_source).begin() + (rank_source_y + 2)*n_base_CUPDATE); // the next sequence with rank=rank_source_y +1
@@ -6968,7 +7146,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 					t_past = t_nt_modified_source.at(rank_source_y - 1);
 
 
-					switch (rank_source_y == (current_size_arg.at(subject_source) - 1)) { // see if the sequence is the last one
+					switch (int(rank_source_y == (current_size_arg.at(subject_source) - 1))) { // see if the sequence is the last one
 					case 1: { // it is the last sequence
 
 						//t_future = t_proposed;
@@ -6999,7 +7177,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 					}
 					case 0: { // not the last sequence
 
-						switch (t_nt_modified_source.at(rank_source_y + 1) < t_nt_modified_subject.at(1)) {
+						switch (int(t_nt_modified_source.at(rank_source_y + 1) < t_nt_modified_subject.at(1))) {
 						case 1: {
 							t_future = t_nt_modified_source.at(rank_source_y + 1);
 							nt_future_forward.assign(nt_current_arg.at(subject_source).begin() + (rank_source_y + 1)*n_base_CUPDATE, nt_current_arg.at(subject_source).begin() + (rank_source_y + 2)*n_base_CUPDATE); // the next sequence with rank=rank_source_y +1
@@ -7043,7 +7221,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 			case 0: {  // propose the time to the left
 
-				switch (rank_source_x == rank_source_y) {
+				switch (int(rank_source_x == rank_source_y)) {
 
 				case 1: { // unchanged rank_source
 
@@ -7059,7 +7237,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 					//------------------------------------------------//
 
-					switch (rank_source_x == (current_size_arg.at(subject_source) - 1)) { // see if the (original) sequence was the last one
+					switch (int(rank_source_x == (current_size_arg.at(subject_source) - 1))) { // see if the (original) sequence was the last one
 
 					case 0: { // it was not the last sequence
 
@@ -7070,7 +7248,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 						seq_proposed_backward = nt_current_seq;
 
 
-						switch (t_nt_modified_source.at(rank_source_x + 1) < t_nt_modified_subject.at(1)) {
+						switch (int(t_nt_modified_source.at(rank_source_x + 1) < t_nt_modified_subject.at(1))) {
 						case 1: {
 							t_future_backward = t_nt_modified_source.at(rank_source_x + 1);
 							nt_future_backward.assign(nt_current_arg.at(subject_source).begin() + (rank_source_x + 1)*n_base_CUPDATE, nt_current_arg.at(subject_source).begin() + (rank_source_x + 2)*n_base_CUPDATE);
@@ -7128,7 +7306,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 					//------------------------------------------------//
 
-					switch (rank_source_x == (current_size_arg.at(subject_source) - 1)) { // see if the (original) sequence was the last one
+					switch (int(rank_source_x == (current_size_arg.at(subject_source) - 1))) { // see if the (original) sequence was the last one
 
 					case 0: { // it was not the last sequence
 
@@ -7138,7 +7316,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 						t_proposed_backward = t_e_arg.at(subject_proposed);
 						seq_proposed_backward = nt_current_seq;
 
-						switch (t_nt_modified_source.at(rank_source_x + 1) < t_nt_modified_subject.at(1)) {
+						switch (int(t_nt_modified_source.at(rank_source_x + 1) < t_nt_modified_subject.at(1))) {
 						case 1: {
 							t_future_backward = t_nt_modified_source.at(rank_source_x + 1);
 							nt_future_backward.assign(nt_current_arg.at(subject_source).begin() + (rank_source_x + 1)*n_base_CUPDATE, nt_current_arg.at(subject_source).begin() + (rank_source_x + 2)*n_base_CUPDATE);
@@ -7203,7 +7381,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 // 		log_pr_backward = lh_snull(con_seq_CUPDATE, nt_current_seq, para_current_arg.p_ber, n_base_CUPDATE);
 
 
-		switch (current_size_arg.at(subject_proposed) > 1) { // return 1 when the subject has more than one sequence available
+		switch (int(current_size_arg.at(subject_proposed) > 1)) { // return 1 when the subject has more than one sequence available
 
 		case 0: { //  ONLY one sequence available for the subject
 
@@ -7237,7 +7415,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 		case 1: { // MORE than one sequence available for the subject
 
-			switch (dt >= 0) {
+			switch (int(dt >= 0)) {
 			case 1: { // propose the time to the right
 				t_past = t_e_arg.at(subject_proposed);
 				nt_past_forward = nt_current_seq;
@@ -7326,7 +7504,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 	//----------------------------------------------------------------------------------//
 
-	switch (current_size_arg.at(subject_proposed) > 1) {
+	switch (int(current_size_arg.at(subject_proposed) > 1)) {
 
 	case 1: {
 
@@ -7373,7 +7551,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 	default: { // not by background
 
 
-		switch (current_size_arg.at(subject_source) > 1) {
+		switch (int(current_size_arg.at(subject_source) > 1)) {
 
 		case 1: {
 
@@ -7417,7 +7595,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 		if (t_i_arg.at(xi_I_arg.at(j)) < t_proposed) {
 
-			switch (t_r_arg.at(xi_I_arg.at(j)) >= t_proposed) {
+			switch (int(t_r_arg.at(xi_I_arg.at(j)) >= t_proposed)) {
 			case 1: {
 				delta_mat_modified[subject_proposed][xi_I_arg.at(j)] = t_proposed - t_i_arg.at(xi_I_arg.at(j));
 
@@ -7466,6 +7644,9 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 			if (opt_mov == 1) {
 				lh_square_modified.movest_sum_E.at(subject_proposed) = lh_square_modified.movest_sum_E.at(subject_proposed) + delta_mat_mov_modified[subject_proposed][xi_I_arg.at(j)];
 			}
+			if (opt_mov == 2) {
+				lh_square_modified.movest_sum_E.at(subject_proposed) = lh_square_modified.movest_sum_E.at(subject_proposed); //no change
+			}
 
 		}
 	}
@@ -7495,6 +7676,11 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 			double moves_ij_t = func_moves_cnt(infected_source_current_arg.at(subject_proposed), subject_proposed, mov_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 			lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
 		}
+		if (opt_mov == 2) {
+			double moves_ij_t = func_moves_cnt(infected_source_current_arg.at(subject_proposed), subject_proposed, mov_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
+			lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
+		}
+
 
 		lh_square_modified.g_E.at(subject_proposed) = para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(subject_proposed);
 
@@ -7522,7 +7708,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 	case 1: {
 
-		switch (t_proposed < t_e_arg.at(index_arg.at(0))) { // original indexes would be replace by the chosen subject
+		switch (int(t_proposed < t_e_arg.at(index_arg.at(0)))) { // original indexes would be replace by the chosen subject
 
 		case 1: {
 
@@ -7625,7 +7811,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 		int num_min = (int)count(t_e_modified.begin(), t_e_modified.end(), min_t); // numberof subects with the min exposure time
 
 
-		switch (num_min > 1) {
+		switch (int(num_min > 1)) {
 		case 1: {
 			index_modified.reserve(n_CUPDATE);
 			for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -7748,7 +7934,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		delta_mat_current_arg = delta_mat_modified;
@@ -7875,7 +8061,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 	for (int i = 0; i <= (int)(xi_I_arg.size() - 1); i++) {
 
-		switch (t_i_arg.at(xi_I_arg.at(i)) < t_bound) {
+		switch (int(t_i_arg.at(xi_I_arg.at(i)) < t_bound)) {
 			//	switch( (t_i_arg.at(xi_I_arg.at(i))<t_bound) & ((t_bound  - t_r_arg.at(xi_I_arg.at(i)))<=t_back) ){
 
 		case 1: {
@@ -7902,7 +8088,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 	vector<double> ic(num_infectious);
 	ic.at(0) = para_current_arg.alpha;
 
-	switch (num_infectious >= 2) {
+	switch (int(num_infectious >= 2)) {
 
 	case 1: { // with 2nd sources from pool
 
@@ -7916,6 +8102,10 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 				ic.at(j) = para_current_arg.beta*beta_ij_mat_current_arg[source_pool.at(j)][subject_proposed] * kernel_mat_current_arg[subject_proposed][source_pool.at(j)] / norm_const_current_arg.at(source_pool.at(j)); // a new source will be proposed according to the infectious challenges
 			}
 			if (opt_mov == 1) {
+				double moves_ij_t = func_moves_cnt(source_pool.at(j), subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
+				ic.at(j) = ic.at(j) + para_current_arg.beta_m*moves_ij_t;
+			}
+			if (opt_mov == 2) {
 				double moves_ij_t = func_moves_cnt(source_pool.at(j), subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				ic.at(j) = ic.at(j) + para_current_arg.beta_m*moves_ij_t;
 			}
@@ -7934,7 +8124,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 		source_y = source_pool.at(link); // a new source
 		log_pr_forward = log(ic.at(link));
 
-		switch (source_x == 9999) {
+		switch (int(source_x == 9999)) {
 		case 0: {
 
 			double ic_source_x = 0.0;
@@ -7950,6 +8140,11 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 				double moves_ij_t = func_moves_cnt(source_x, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				ic_source_x = ic_source_x + para_current_arg.beta_m*moves_ij_t;
 			}
+			if (opt_mov == 2) {
+				double moves_ij_t = func_moves_cnt(source_x, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
+				ic_source_x = ic_source_x + para_current_arg.beta_m*moves_ij_t;
+			}
+
 			log_pr_backward = log(ic_source_x);
 
 
@@ -7985,7 +8180,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 	//----------------------------------------------------------------------------------------------------------------//
 
-	switch (source_y == source_x) {
+	switch (int(source_y == source_x)) {
 
 	case 0: {
 
@@ -8169,7 +8364,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 		//------------------------------------------------
 
-		switch (source_y == 9999) {
+		switch (int(source_y == 9999)) {
 
 		case 0: {// new 2nd infection
 
@@ -8207,16 +8402,16 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			//t_proposed = t_e_subject;
 
-			switch (current_size_arg.at(subject_proposed) > 1) {
+			switch (int(current_size_arg.at(subject_proposed) > 1)) {
 				//switch(t_sample_arg.at(subject_proposed)!=unassigned_time_CUPDATE){
 
 			case 1: {// with 2nd seq in subject
 
-				switch (current_size_modified.at(source_y) > (rank_source_y + 1)) {
+				switch (int(current_size_modified.at(source_y) > (rank_source_y + 1))) {
 
 				case 1: {// inserted seq will NOT be last seq at rank_source_y  in source_y (take closer seq as the future seq)
 
-					switch (t_nt_current_arg[subject_proposed][1] < t_nt_modified_source_y.at(rank_source_y + 1)) {
+					switch (int(t_nt_current_arg[subject_proposed][1] < t_nt_modified_source_y.at(rank_source_y + 1))) {
 						//switch(t_sample_arg.at(subject_proposed)<t_nt_modified_source_y.at(rank_source_y +1)){
 
 					case 1: {// take the one from subject as future seq
@@ -8259,7 +8454,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			case 0: {// with no 2nd seq in subject
 
-				switch (current_size_modified.at(source_y) > (rank_source_y + 1)) {
+				switch (int(current_size_modified.at(source_y) > (rank_source_y + 1))) {
 
 				case 1: {// inserted seq will NOT be last seq at rank_source_y  in source_y
 					t_future = t_nt_modified_source_y.at(rank_source_y + 1);
@@ -8297,7 +8492,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 // 				log_pr_seq_forward = lh_snull(con_seq_CUPDATE, seq_proposed, para_current_arg.p_ber, n_base_CUPDATE);
 
 
-			switch (current_size_arg.at(subject_proposed) > 1) {
+			switch (int(current_size_arg.at(subject_proposed) > 1)) {
 				//switch(t_sample_arg.at(subject_proposed)!=unassigned_time_CUPDATE){
 
 			case 1: {// with 2nd seq in subject
@@ -8346,7 +8541,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 		t_nt_modified.at(subject_proposed) = t_nt_modified_subject;
 		//---------------------------------------------
 
-		switch (source_x == 9999) {
+		switch (int(source_x == 9999)) {
 
 		case 0: {// was 2nd infection
 
@@ -8371,15 +8566,15 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 			t_proposed_backward = t_e_arg.at(subject_proposed);
 			seq_proposed_backward.assign(nt_current_arg.at(subject_proposed).begin(), nt_current_arg.at(subject_proposed).begin() + n_base_CUPDATE);
 
-			switch (current_size_arg.at(subject_proposed) > 1) {
+			switch (int(current_size_arg.at(subject_proposed) > 1)) {
 				//switch(t_sample_arg.at(subject_proposed)!=unassigned_time_CUPDATE){
 
 			case 1: {// with2nd seq subject
 
-				switch (current_size_arg.at(source_x) > (rank_source_x + 1)) {
+				switch (int(current_size_arg.at(source_x) > (rank_source_x + 1))) {
 
 				case 1: {// also NOT last seq at rank_source_x  in source_x (take closer seq as the future seq)
-					switch (t_nt_current_arg[subject_proposed][1] < t_nt_current_source_x.at(rank_source_x + 1)) {
+					switch (int(t_nt_current_arg[subject_proposed][1] < t_nt_current_source_x.at(rank_source_x + 1))) {
 						//switch(t_sample_arg.at(subject_proposed)<t_nt_current_source_x.at(rank_source_x +1)){
 
 					case 1: {// take the one from subject as future seq
@@ -8418,7 +8613,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			case 0: { // with no 2nd seq in the subject
 
-				switch (current_size_arg.at(source_x) > (rank_source_x + 1)) {
+				switch (int(current_size_arg.at(source_x) > (rank_source_x + 1))) {
 				case 1: { // not last seq at rank_source_x  in source_x
 					t_future_backward = t_nt_current_source_x.at(rank_source_x + 1);
 					nt_future_backward.assign(nt_current_source_x.begin() + (rank_source_x + 1)*n_base_CUPDATE, nt_current_source_x.begin() + (rank_source_x + 2)*n_base_CUPDATE);
@@ -8463,7 +8658,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 // 				log_pr_seq_backward = lh_snull(con_seq_CUPDATE, seq, para_current_arg.p_ber, n_base_CUPDATE);
 
 
-			switch (current_size_arg.at(subject_proposed) > 1) {
+			switch (int(current_size_arg.at(subject_proposed) > 1)) {
 				//switch(t_sample_arg.at(subject_proposed)!=unassigned_time_CUPDATE){
 
 			case 1: {// with 2nd seq in subject
@@ -8701,7 +8896,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			//------------- deal with change of likelihood due to change of source and sequences in subject_proposed)---------------//
 
-		switch (current_size_arg.at(subject_proposed) > 1) {
+		switch (int(current_size_arg.at(subject_proposed) > 1)) {
 
 		case 1: {
 
@@ -8738,7 +8933,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			if (t_i_arg.at(xi_I_arg.at(j)) < t_proposed) {
 
-				switch (t_r_arg.at(xi_I_arg.at(j)) >= t_proposed) {
+				switch (int(t_r_arg.at(xi_I_arg.at(j)) >= t_proposed)) {
 				case 1: {
 					delta_mat_modified[subject_proposed][xi_I_arg.at(j)] = t_proposed - t_i_arg.at(xi_I_arg.at(j));
 
@@ -8786,6 +8981,10 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 					//double moves_ij_t = func_moves_cnt(xi_I_arg.at(j), subject_proposed, moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 					lh_square_modified.movest_sum_E.at(subject_proposed) = lh_square_modified.movest_sum_E.at(subject_proposed) + delta_mat_mov_modified[subject_proposed][xi_I_arg.at(j)];
 				}
+				if (opt_mov == 2) {
+					//double moves_ij_t = func_moves_cnt(xi_I_arg.at(j), subject_proposed, moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
+					lh_square_modified.movest_sum_E.at(subject_proposed) = lh_square_modified.movest_sum_E.at(subject_proposed); //no change
+				}
 
 			}
 		}
@@ -8816,6 +9015,11 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 				double moves_ij_t = func_moves_cnt(source_y, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
 			}
+			if (opt_mov == 2) {
+				double moves_ij_t = func_moves_cnt(source_y, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
+				lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
+			}
+
 
 			lh_square_modified.g_E.at(subject_proposed) = para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(subject_proposed);
 
@@ -8841,7 +9045,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 		case 1: {
 
-			switch (t_proposed < t_e_arg.at(index_arg.at(0))) { // original indexes would be replace by the chosen subject
+			switch (int(t_proposed < t_e_arg.at(index_arg.at(0)))) { // original indexes would be replace by the chosen subject
 
 			case 1: {
 
@@ -8931,7 +9135,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 			int num_min = (int)count(t_e_modified.begin(), t_e_modified.end(), min_t); // numberof subects with the min exposure time
 
-			switch (num_min > 1) {
+			switch (int(num_min > 1)) {
 			case 1: {
 				index_modified.reserve(n_CUPDATE);
 				for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -9104,7 +9308,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 				lh_square_modified.log_f_S.at(source_x) = 0.0;
 
-				switch (current_size_modified.at(source_x) > 1) {// only have to count log_f_S if there are more than or equal to 2 seq left in source_x
+				switch (int(current_size_modified.at(source_x) > 1)) {// only have to count log_f_S if there are more than or equal to 2 seq left in source_x
 				case 1: {
 					for (int j = 0; j <= (current_size_modified.at(source_x) - 2); j++) {
 
@@ -9146,7 +9350,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 				lh_square_modified.log_f_S.at(source_x) = 0.0;
 
-				switch (current_size_modified.at(source_x) > 1) {// only have to count log_f_S if there are more than or equal to 2 seq left in source_x
+				switch (int(current_size_modified.at(source_x) > 1)) {// only have to count log_f_S if there are more than or equal to 2 seq left in source_x
 				case 1: {
 					for (int j = 0; j <= (current_size_modified.at(source_x) - 2); j++) {
 
@@ -9207,7 +9411,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 		double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-		switch (uniform_rv <= acp_pr) {
+		switch (int(uniform_rv <= acp_pr)) {
 		case 1: {
 
 			lh_square_current_arg = lh_square_modified;
@@ -9287,7 +9491,7 @@ void count_type_all(nt_struct & nt_data_arg, vector<int>& xi_E_current, int& n_b
 
 		int k_E = xi_E_current.at(i);
 
-		switch (nt_data_arg.current_size.at(k_E) > 1) {
+		switch (int(nt_data_arg.current_size.at(k_E) > 1)) {
 
 		case 1: {
 
@@ -9436,7 +9640,7 @@ inline void seq_backward_pr_tri(const vector<int>& seq_proposed_backward, double
 
 		double pr_sum = 0.0; // an "or" probability
 
-		switch (seq_proposed_backward.at(i) == nt_past_backward.at(i)) {
+		switch (int(seq_proposed_backward.at(i) == nt_past_backward.at(i))) {
 		case 1: {
 			pr_sum = pr_sum + P[0];
 			break;
@@ -9446,7 +9650,7 @@ inline void seq_backward_pr_tri(const vector<int>& seq_proposed_backward, double
 		}
 		}
 
-		switch (seq_proposed_backward.at(i) == nt_tri_1_backward.at(i)) {
+		switch (int(seq_proposed_backward.at(i) == nt_tri_1_backward.at(i))) {
 		case 1: {
 			pr_sum = pr_sum + P[1];
 			break;
@@ -9456,7 +9660,7 @@ inline void seq_backward_pr_tri(const vector<int>& seq_proposed_backward, double
 		}
 		}
 
-		switch (seq_proposed_backward.at(i) == nt_tri_2_backward.at(i)) {
+		switch (int(seq_proposed_backward.at(i) == nt_tri_2_backward.at(i))) {
 		case 1: {
 			pr_sum = pr_sum + P[2];
 			break;
@@ -9597,7 +9801,7 @@ void mcmc_UPDATE::seq_n_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 	//nt base_next_subject =0;
 
-	switch (current_size_arg.at(subject_proposed) > 1) {
+	switch (int(current_size_arg.at(subject_proposed) > 1)) {
 
 	case 1: {
 		//--
@@ -9654,7 +9858,7 @@ void mcmc_UPDATE::seq_n_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 		//base_before_source =  nt_current_arg[subject_source][(rank_source-1)*n_base_CUPDATE + position_proposed];
 		nt_before_source.assign(nt_current_arg.at(subject_source).begin() + n_base_CUPDATE * (rank_source - 1), nt_current_arg.at(subject_source).begin() + n_base_CUPDATE * rank_source);
 
-		switch (current_size_arg.at(subject_source) > (rank_source + 1)) {
+		switch (int(current_size_arg.at(subject_source) > (rank_source + 1))) {
 		case 1: {// there  is a valid base_next_source
 
 // 				base_next_source =  nt_current_arg[subject_source][(rank_source+1)*n_base_CUPDATE + position_proposed];
@@ -9710,7 +9914,7 @@ void mcmc_UPDATE::seq_n_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 
 		lh_square_current_arg = lh_square_modified;
@@ -10053,7 +10257,7 @@ void mcmc_UPDATE::index_first_seq(lh_SQUARE& lh_square_current_arg, double& log_
 
 	//-----------------
 
-	switch (current_size_arg.at(subject_proposed) > 1) { // return 1 when the subject has more than one sequence available
+	switch (int(current_size_arg.at(subject_proposed) > 1)) { // return 1 when the subject has more than one sequence available
 
 	case 0: { //  ONLY one sequence available for the subject; XX not relevant as we assume #seq on index>=2 XX
 
@@ -10097,7 +10301,7 @@ void mcmc_UPDATE::index_first_seq(lh_SQUARE& lh_square_current_arg, double& log_
 
 	//----------------------------------------------------------------------------------//
 
-	switch (current_size_arg.at(subject_proposed) > 1) {
+	switch (int(current_size_arg.at(subject_proposed) > 1)) {
 
 	case 1: {
 
@@ -10144,7 +10348,7 @@ void mcmc_UPDATE::index_first_seq(lh_SQUARE& lh_square_current_arg, double& log_
 	double uniform_rv = runif(0.0, 1.0, rng_arg);
 
 
-	switch (uniform_rv <= acp_pr) {
+	switch (int(uniform_rv <= acp_pr)) {
 	case 1: {
 		lh_square_current_arg = lh_square_modified;
 		// delta_mat_current_arg = delta_mat_modified;
@@ -10263,7 +10467,7 @@ void initialize_mcmc(para_key_init& para_init, para_key& para_current, para_aux&
 
 	for (int i = 0; i <= (int)(xi_E_current.size() - 1); i++) {// loop over infections
 
-		switch (nt_data_current.t_sample.at(xi_E_current.at(i)) != para_other.unassigned_time) {
+		switch (int(nt_data_current.t_sample.at(xi_E_current.at(i)) != para_other.unassigned_time)) {
 
 		case 1: { // with sample, must be infected
 
@@ -10337,7 +10541,7 @@ void initialize_mcmc(para_key_init& para_init, para_key& para_current, para_aux&
 
 		infected_source_current.at(xi_E_current.at(i)) = source;
 
-		switch (source == 9999) {
+		switch (int(source == 9999)) {
 		case 0: {// 2nd infection
 
 			//--------when propose t_e after deciding source_pool//
@@ -10356,7 +10560,7 @@ void initialize_mcmc(para_key_init& para_init, para_key& para_current, para_aux&
 			sort(nt_data_current.t_nt.at(source).begin(), nt_data_current.t_nt.at(source).end());
 
 
-			switch (nt_data_current.infecting_size.at(source) >= 1) {
+			switch (int(nt_data_current.infecting_size.at(source) >= 1)) {
 			case 1: {
 				vector<double> t_y(nt_data_current.infecting_size.at(source));
 				for (int k = 0; k <= (nt_data_current.infecting_size.at(source) - 1); k++) {
@@ -10525,9 +10729,9 @@ void initialize_mcmc(para_key_init& para_init, para_key& para_current, para_aux&
 	// 	nt_data_current.nt.at(subject).resize(nt_data_current.current_size.at(subject) *para_other.n_base);
 
 
-		switch (source == 9999) {
+		switch (int(source == 9999)) {
 		case 0: {// secondary
-			switch (nt_data_current.t_sample.at(source) == para_other.unassigned_time) {
+			switch (int(nt_data_current.t_sample.at(source) == para_other.unassigned_time)) {
 			case 1: {// source has no sample
 				seq_initialize_pair(nt_data_current, source, subject, t_e_current.at(subject), para_other.n_base, para_current);
 
@@ -10786,12 +10990,10 @@ inline int find_in_vec_int(int key_arg, vector<int> vec) {
 /*-------------------------------------------------------*/
 
 
+
 /*----------------------------*/
 /*- SIM functions ------------*/
 /*----------------------------*/
-
-
-//----------------------
 ///// Boost probability distributions
 rng_type rng_sim;
 int seed_sim;
@@ -11240,7 +11442,7 @@ void epi_functions::func_ric(mov_struct& mov_data_arg, epi_struct_sim& epi_data_
 
 	int num_uninfected = uninfected_arg.size();
 
-	switch (num_uninfected >= 1) {
+	switch (int(num_uninfected >= 1)) {
 
 	case 1: {
 		for (int j = 0; j <= (num_uninfected - 1); j++) {
@@ -11250,7 +11452,7 @@ void epi_functions::func_ric(mov_struct& mov_data_arg, epi_struct_sim& epi_data_
 			double ric = 0.0;
 
 
-			switch (once_infectious_arg.size() == 0) {
+			switch (int(once_infectious_arg.size() == 0)) {
 			case 1: {  //there are as yet none infected, just background pressure (alpha)
 				ric = epi_data_arg.q.at(k_arg) - alpha_Cepi * t_now_arg;
 
@@ -11334,7 +11536,7 @@ void epi_functions::func_t_next(mov_struct& mov_data_arg, epi_struct_sim& epi_da
 		switch (epi_data_arg.status.at(k_arg)) {
 		case 1: {  //1=S
 
-			switch ((num_infectious) >= 1) {
+			switch (int((num_infectious) >= 1)) {
 			case 1: {
 				double beta_ij_now = 0.0; // the additional (secondary) spatial-related contribution to the infectious pressure, from each of those infectious at time_now
 				////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -11491,7 +11693,7 @@ void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& e
 
 		//--------
 
-			switch (num_infectious >= 1) {
+			switch (int(num_infectious >= 1)) {
 
 			case 1: {
 				vector<double> ic(num_infectious + 1);  //one infectious component to add for: alpha, and betaij per infective
@@ -11529,7 +11731,7 @@ void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& e
 				for (int i = 0; i < (int)(ic.size()); i++) { if (ic.at(i) < 0) { ic.at(i) = 0; } }
 				int link = edf_sample_sim(ic, rng_arg);
 
-				switch (link >= 1) {
+				switch (int(link >= 1)) {
 				case 1: {
 					int k_source = infected_source_arg.at(ind_now_arg.at(i)) = infectious_arg.at(link - 1); //minus 1 because first element was alpha
 
@@ -11586,7 +11788,7 @@ void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& e
 						// 				myfile <<ber_trial<< endl;
 						// 				myfile.close();
 
-						switch (ber_trial == 1) {
+						switch (int(ber_trial == 1)) {
 						case 1: { // randomly choose one among other 3
 							switch (con_seq.at(j)) {
 							case 1: {
@@ -11723,7 +11925,7 @@ void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& e
 					// 				myfile <<ber_trial<< endl;
 					// 				myfile.close();
 
-					switch (ber_trial == 1) {
+					switch (int(ber_trial == 1)) {
 					case 1: { // randomly choose one among other 3
 						switch (con_seq.at(j)) {
 						case 1: {
@@ -12589,10 +12791,6 @@ double roundx_sim(double x, int y) {
 
 
 
-
-
-
-
 /*----------------------------------------------------------*/
 /*- Main call of function to export & inputs from R --------*/
 /*----------------------------------------------------------*/
@@ -12652,13 +12850,14 @@ Rcpp::List infer_cpp() {
 	if (para_other.np > 1) {	// on cluster
 		char *env_tid = getenv("SLURM_ARRAY_TASK_ID");
 		char tid_ch = *env_tid;
+
 		//int tid_l = strlen(&tid_ch);
-		//Rcpp::Rcout << tid_l << endl;
+		//cout << tid_l << endl;
 		//for (int i = 0; i < tid_l; i++) {
 		int tid = atoi(&tid_ch); //just takes first character, &tid_ch[0], need whole string
 		//gsl_rng_set(r_c_unvs, seeds.at(tid-1)); // set a universal seed
 		seed = seeds.at(tid - 1); //set a universal seed
-		Rcpp::Rcout << "tid: " << tid << "  seed: " << seeds.at(tid - 1) << endl;
+		cout << "tid: " << tid << "  seed: " << seeds.at(tid - 1) << endl;
 	}
 
 	rng_type rng(seed); //set a universal seed
@@ -12839,7 +13038,7 @@ Rcpp::List infer_cpp() {
 
 	//if (debug == 1) {
 	//	for (int i = 0; i <= ((int)para_other.n - 1); i++) {
-	//		Rcpp::Rcout << "t_i-e: " << t_i_current.at(i) - t_e_current.at(i) << "t_e: " << t_e_current.at(i) << " t_i: " << t_i_current.at(i) << endl;
+	//		cout << "t_i-e: " << t_i_current.at(i) - t_e_current.at(i) << "t_e: " << t_e_current.at(i) << " t_i: " << t_i_current.at(i) << endl;
 	//	}
 	//}
 
@@ -12907,7 +13106,7 @@ Rcpp::List infer_cpp() {
 	initialize_mcmc(para_init, para_current, para_other, para_priorsetc, xi_I_current, xi_U_current, xi_E_current, xi_E_minus_current, xi_R_current, xi_EnI_current, xi_EnIS_current, xi_InR_current, t_e_current, t_i_current, t_r_current, index_current, infected_source_current, kernel_mat_current, norm_const_current, sample_data, t_onset, nt_data_current, con_seq_current, beta_ij_mat_current); // initialze the parameters/unobserved data for mcmc
 	//if (debug == 1) {
 	//	for (int i = 0; i <= ((int)para_other.n - 1); i++) {
-	//		Rcpp::Rcout << "t_i-e: " << t_i_current.at(i) - t_e_current.at(i) << "t_e: " << t_e_current.at(i) << " t_i: " << t_i_current.at(i) << endl;
+	//		cout << "t_i-e: " << t_i_current.at(i) - t_e_current.at(i) << "t_e: " << t_e_current.at(i) << " t_i: " << t_i_current.at(i) << endl;
 	//	}
 	//}
 
@@ -13211,6 +13410,10 @@ Rcpp::List infer_cpp() {
 		if (opt_mov == 1) {
 			mcmc_update.beta_m_update(lh_square_current, log_lh_current, xi_U_current, xi_E_minus_current, t_e_current, index_current, infected_source_current, para_current, para_priorsetc, para_scalingfactors, i, rng);
 		}
+		if (opt_mov == 2) {
+			mcmc_update.beta_m_update(lh_square_current, log_lh_current, xi_U_current, xi_E_minus_current, t_e_current, index_current, infected_source_current, para_current, para_priorsetc, para_scalingfactors, i, rng);
+		}
+
 
 		if (para_other.kernel_type == "exponential") {
 			mcmc_update.k_1_update(lh_square_current, log_lh_current, kernel_mat_current, delta_mat_current, xi_U_current, xi_E_minus_current, xi_I_current, t_r_current, t_i_current, t_e_current, index_current, para_current, infected_source_current, norm_const_current, para_priorsetc, para_scalingfactors, beta_ij_mat_current, moves, i, rng, delta_mat_mov_current);
@@ -13336,28 +13539,31 @@ Rcpp::List infer_cpp() {
 		if ((debug == 1) & (i + 1 == 20)) { //checksum based on LH of 20th mcmc cycle Max Lau's original run,
 						  //under para_aux input all opts == 0, lh_check == 0 if same config
 			if ((opt_latgamma == 0) & (opt_k80 == 0) & (opt_betaij == 0) & (opt_ti_update == 0)) {
-				Rcpp::Rcout << "lh_check original(a52): " << roundx(abs(739100 + log_lh_current), 0) << ", " << log_lh_current << endl; //original
+				cout << "lh_check original(a52): " << roundx(abs(739100 + log_lh_current), 0) << ", " << log_lh_current << endl; //original
 			}
 
 			if ((opt_latgamma == 1) & (opt_k80 == 1) & (opt_betaij == 0) & (opt_ti_update == 0)) {
-				Rcpp::Rcout << "lh_check 1(a52): " << roundx(abs(715451 + log_lh_current), 0) << ", " << log_lh_current << endl; //sf_edit1
-				Rcpp::Rcout << "lh_check 1(jpn): " << roundx(abs(377755 + log_lh_current), 0) << ", " << log_lh_current << endl; //original
+				cout << "lh_check 1(a52): " << roundx(abs(715451 + log_lh_current), 0) << ", " << log_lh_current << endl; //sf_edit1
+				cout << "lh_check 1(jpn): " << roundx(abs(377755 + log_lh_current), 0) << ", " << log_lh_current << endl; //original
 
 				if ((opt_mov == 0)) {
-					Rcpp::Rcout << "lh_check 1(sk100_mov0): " << roundx(abs(508682 + log_lh_current), 0) << ", " << log_lh_current << endl;
+					cout << "lh_check 1(sk100_mov0): " << roundx(abs(508682 + log_lh_current), 0) << ", " << log_lh_current << endl;
 				}
 				if ((opt_mov == 1)) {
-					Rcpp::Rcout << "lh_check 1(sk100_mov1): " << roundx(abs(489075 + log_lh_current), 0) << ", " << log_lh_current << endl;
+					cout << "lh_check 1(sk100_mov1): " << roundx(abs(489075 + log_lh_current), 0) << ", " << log_lh_current << endl;
+				}
+				if ((opt_mov == 2)) {
+					cout << "lh_check 1(sk100_mov2): " << roundx(abs(575380 + log_lh_current), 0) << ", " << log_lh_current << endl;
 				}
 
 			}
 
 			if ((opt_latgamma == 1) & (opt_k80 == 1) & (opt_betaij == 1) & (opt_ti_update == 0)) {
-				Rcpp::Rcout << "lh_check 1.betaij(a52): " << roundx(abs(635001 + log_lh_current), 0) << ", " << log_lh_current << endl; //sf_edit2 (beta_ij)
+				cout << "lh_check 1.betaij(a52): " << roundx(abs(635001 + log_lh_current), 0) << ", " << log_lh_current << endl; //sf_edit2 (beta_ij)
 			}
 
 			if ((opt_latgamma == 1) & (opt_k80 == 1) & (opt_betaij == 0) & (opt_ti_update == 1)) {
-				Rcpp::Rcout << "lh_check 1.ti(a52): " << roundx(abs(650105 + log_lh_current), 0) << ", " << log_lh_current << endl; //t_i_update
+				cout << "lh_check 1.ti(a52): " << roundx(abs(650105 + log_lh_current), 0) << ", " << log_lh_current << endl; //t_i_update
 			}
 
 
@@ -13378,7 +13584,7 @@ Rcpp::List infer_cpp() {
 
 		if (div_iter_cout.rem == 0) { // for console output (only at every n_cout iterations)
 			if ((i + 1) >= 10) {
-				Rcpp::Rcout << i + 1 << ": corr = " << corr << " coverage = " << roundx(coverage, 2) << ", c = " << roundx(para_current.c, 3) << ", d = " << roundx(para_current.d, 3) << ", mu_1 = " << para_current.mu_1 << ", mu_2 = " << para_current.mu_2 << ", beta_m = " << roundx(para_current.beta_m, 3) << endl;
+				cout << i + 1 << ": corr = " << corr << " coverage = " << roundx(coverage, 2) << ", c = " << roundx(para_current.c, 3) << ", d = " << roundx(para_current.d, 3) << ", mu_1 = " << para_current.mu_1 << ", mu_2 = " << para_current.mu_2 << ", beta_m = " << roundx(para_current.beta_m, 3) << endl;
 			}
 		}
 
@@ -13397,7 +13603,7 @@ Rcpp::List infer_cpp() {
 		//div_iter_seq = div (i,2000);
 		div_iter_seq = div(i, para_other.n_output_gm);
 
-		switch (div_iter_seq.rem == 0) {
+		switch (int(div_iter_seq.rem == 0)) {
 
 		case 1: {
 
@@ -13453,6 +13659,7 @@ Rcpp::List infer_cpp() {
 	myfile7_out.close();  //inferred sequence_timings every n_output_gm cycles
 
 	//------------------
+
 
   
   /*----------------------------*/
@@ -13838,7 +14045,7 @@ Rcpp::List sim_cpp() {
 			// 		boost::variate_generator<base_generator_type&, boost::bernoulli_distribution<> > ber(base_generator_type, ber_dist);
 			// 		ber_trial = ber();
 
-			switch (ber_trial == 1) {
+			switch (int(ber_trial == 1)) {
 
 			case 1: { // randomly choose one among other 3
 				switch (con_seq.at(j)) {
@@ -14113,14 +14320,14 @@ Rcpp::List sim_cpp() {
 
 		if ((debug_sim == 1) & (loop_count == 100)) { //checksum based on t_now at 100th cycle,
 			if (opt_betaij_sim == 0 && opt_mov_sim == 0) {
-				Rcpp::Rcout << "t_now check (vanilla): " << roundx_sim(abs((7.86191 - t_now)*1e5), 0) << endl; //original
+				cout << "t_now check (vanilla): " << roundx_sim(abs((7.86191 - t_now)*1e5), 0) << endl; //original
 			}
 			if (opt_betaij_sim == 1 && opt_mov_sim == 0) {
-				Rcpp::Rcout << "t_now check (betaij): " << roundx_sim(abs((10.12932 - t_now)*1e5), 0) << endl; //original
+				cout << "t_now check (betaij): " << roundx_sim(abs((10.12932 - t_now)*1e5), 0) << endl; //original
 			}
 			if (opt_betaij_sim == 0 && opt_mov_sim == 1) {
-				Rcpp::Rcout << "t_now check (movt): " << roundx_sim(abs((15.14894 - t_now)*1e5), 0) << endl;
-				//Rcpp::Rcpp::Rcout << "t_now check (movt): " << 0 - t_now << endl;
+				cout << "t_now check (movt): " << roundx_sim(abs((15.14894 - t_now)*1e5), 0) << endl;
+				//cout << "t_now check (movt): " << 0 - t_now << endl;
 			}
 		}
 
@@ -14317,7 +14524,7 @@ Rcpp::List sim_cpp() {
 
 		myfile.open((string(PATH2) + string("subject_").c_str() + string(convert.str()) + string("_nt.txt")).c_str(), ios::app);
 
-		switch (para_other.partial_seq_out == 1) {
+		switch (int(para_other.partial_seq_out == 1)) {
 		case 0: {// output full seq
 			for (int j = 0; j <= (nt_data.current_size.at(i)*para_other.n_base - 1); j++) {
 				int rem = (j + 1) % para_other.n_base;
@@ -14503,6 +14710,7 @@ Rcpp::List sim_cpp() {
 
 
 	/*----------------------------*/
+
 
  
   /*----------------------------*/
