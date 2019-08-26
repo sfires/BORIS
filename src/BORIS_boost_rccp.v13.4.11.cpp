@@ -2561,10 +2561,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 			}
 
 			lh_square_arg.q_T.at(xi_U_Clh.at(i)) = alpha_Clh * t_max_Clh + beta_Clh * lh_square_arg.kt_sum_U.at(xi_U_Clh.at(i));
-			if (opt_mov == 1) {
-				lh_square_arg.q_T.at(xi_U_Clh.at(i)) = lh_square_arg.q_T.at(xi_U_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_arg.q_T.at(xi_U_Clh.at(i)) = lh_square_arg.q_T.at(xi_U_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_U.at(xi_U_Clh.at(i));
 			}
 
@@ -2693,12 +2690,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 					lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i)) = 0.0;
 					lh_square_arg.g_E.at(xi_E_minus_Clh.at(i)) = beta_Clh * lh_square_arg.k_sum_E.at(xi_E_minus_Clh.at(i));
 				}
-				if (opt_mov == 1) {
-					double moves_ij_t = func_moves_cnt(infected_source_Clh.at(xi_E_minus_Clh.at(i)), xi_E_minus_Clh.at(i), moves_arg, t_e_Clh, t_i_Clh, t_r_Clh, para_priors_arg);
-					lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i)) = moves_ij_t;
-					lh_square_arg.g_E.at(xi_E_minus_Clh.at(i)) = beta_Clh * lh_square_arg.k_sum_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i));
-				}
-				if (opt_mov == 2) {
+				if ((opt_mov == 1) | (opt_mov == 2)) {
 					double moves_ij_t = func_moves_cnt(infected_source_Clh.at(xi_E_minus_Clh.at(i)), xi_E_minus_Clh.at(i), moves_arg, t_e_Clh, t_i_Clh, t_r_Clh, para_priors_arg);
 					lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i)) = moves_ij_t;
 					lh_square_arg.g_E.at(xi_E_minus_Clh.at(i)) = beta_Clh * lh_square_arg.k_sum_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.moves_sum_E.at(xi_E_minus_Clh.at(i));
@@ -2712,10 +2704,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 
 
 			lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = alpha_Clh * t_e_Clh.at(xi_E_minus_Clh.at(i)) + beta_Clh * lh_square_arg.kt_sum_E.at(xi_E_minus_Clh.at(i));
-			if (opt_mov == 1) {
-				lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)) + beta_m_Clh * lh_square_arg.movest_sum_E.at(xi_E_minus_Clh.at(i));
 			}
 
@@ -3236,10 +3225,7 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //subtract part of likelihood that would be updated below
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = alpha_proposed * t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -3276,12 +3262,10 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = alpha_proposed * t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
-			if (opt_mov == 2) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
+
 
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)),1.0);
@@ -3359,10 +3343,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //subtract part of likelihood that would be updated below
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + beta_proposed * lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -3390,10 +3371,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 			default: { // not by background
 			//lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) ; // this unchanged as long as infectious source unchanged
 				lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = beta_proposed * lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-				if (opt_mov == 1) {
-					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-				}
-				if (opt_mov == 2) {
+				if ((opt_mov == 1) | (opt_mov == 2)) {
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 				}
 
@@ -3404,10 +3382,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + beta_proposed * lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4103,10 +4078,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4184,11 +4156,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 					}
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m * lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m * lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -4202,10 +4170,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4350,10 +4315,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4414,11 +4376,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -4432,10 +4390,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4584,10 +4539,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4645,11 +4597,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -4663,10 +4611,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -4812,10 +4757,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -4873,11 +4815,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -4891,10 +4829,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5042,12 +4977,10 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
-			if (opt_mov == 2) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
+
 
 			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
@@ -5103,11 +5036,7 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -5121,10 +5050,7 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5272,10 +5198,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -5334,11 +5257,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -5352,10 +5271,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -5504,10 +5420,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 			}
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
@@ -5566,11 +5479,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 					lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i)) = beta_ij_mat_modified[infected_source_arg.at(xi_E_minus_arg.at(i))][xi_E_minus_arg.at(i)] * kernel_mat_current_arg[xi_E_minus_arg.at(i)][infected_source_arg.at(xi_E_minus_arg.at(i))] / norm_const_current_arg.at(infected_source_arg.at(xi_E_minus_arg.at(i))); // update k_sum_E
 
 					lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = para_current_arg.beta*lh_square_modified.k_sum_E.at(xi_E_minus_arg.at(i));
-					if (opt_mov == 1) {
-						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
-						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
-					}
-					if (opt_mov == 2) {
+					if ((opt_mov == 1) | (opt_mov == 2)) {
 						lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i)) = func_moves_cnt(infected_source_arg.at(xi_E_minus_arg.at(i)), xi_E_minus_arg.at(i), moves_arg, t_e_arg, t_i_arg, t_r_arg, para_priors_arg);
 						lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.moves_sum_E.at(xi_E_minus_arg.at(i));
 					}
@@ -5584,10 +5493,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(i));
-			if (opt_mov == 1) {
-				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
@@ -6300,7 +6206,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 					if (opt_mov == 1) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) + delta_mat_mov_modified[xi_E_minus_arg.at(j)][subject_proposed];
 					}
-					if (opt_mov == 3) {
+					if (opt_mov == 2) {
 						lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j)); // no change
 					}
 
@@ -6310,10 +6216,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				}
 
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(j)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j));
-				if (opt_mov == 1) {
-					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
-				}
-				if (opt_mov == 2) {
+				if ((opt_mov == 1) | (opt_mov == 2)) {
 					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
 				}
 
@@ -6363,10 +6266,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 				}
 
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(j)) + para_current_arg.beta*lh_square_modified.kt_sum_E.at(xi_E_minus_arg.at(j));
-				if (opt_mov == 1) {
-					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
-				}
-				if (opt_mov == 2) {
+				if ((opt_mov == 1) | (opt_mov == 2)) {
 					lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(j));
 				}
 
@@ -7672,11 +7572,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 		if (opt_mov == 0) {
 			lh_square_modified.moves_sum_E.at(subject_proposed) = 0.0;
 		}
-		if (opt_mov == 1) {
-			double moves_ij_t = func_moves_cnt(infected_source_current_arg.at(subject_proposed), subject_proposed, mov_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
-			lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
-		}
-		if (opt_mov == 2) {
+		if ((opt_mov == 1) | (opt_mov == 2)) {
 			double moves_ij_t = func_moves_cnt(infected_source_current_arg.at(subject_proposed), subject_proposed, mov_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 			lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
 		}
@@ -8101,16 +7997,10 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 			if (opt_betaij == 1) {
 				ic.at(j) = para_current_arg.beta*beta_ij_mat_current_arg[source_pool.at(j)][subject_proposed] * kernel_mat_current_arg[subject_proposed][source_pool.at(j)] / norm_const_current_arg.at(source_pool.at(j)); // a new source will be proposed according to the infectious challenges
 			}
-			if (opt_mov == 1) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				double moves_ij_t = func_moves_cnt(source_pool.at(j), subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				ic.at(j) = ic.at(j) + para_current_arg.beta_m*moves_ij_t;
 			}
-			if (opt_mov == 2) {
-				double moves_ij_t = func_moves_cnt(source_pool.at(j), subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
-				ic.at(j) = ic.at(j) + para_current_arg.beta_m*moves_ij_t;
-			}
-
-
 
 		}
 
@@ -8136,11 +8026,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 				ic_source_x = para_current_arg.beta*beta_ij_mat_current_arg[source_x][subject_proposed] * kernel_mat_current_arg[subject_proposed][source_x] / norm_const_current_arg.at(source_x);
 			}
 
-			if (opt_mov == 1) {
-				double moves_ij_t = func_moves_cnt(source_x, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
-				ic_source_x = ic_source_x + para_current_arg.beta_m*moves_ij_t;
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				double moves_ij_t = func_moves_cnt(source_x, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				ic_source_x = ic_source_x + para_current_arg.beta_m*moves_ij_t;
 			}
@@ -9011,11 +8897,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 			if (opt_mov == 0) {
 				lh_square_modified.moves_sum_E.at(subject_proposed) = 0.0;
 			}
-			if (opt_mov == 1) {
-				double moves_ij_t = func_moves_cnt(source_y, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
-				lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
-			}
-			if (opt_mov == 2) {
+			if ((opt_mov == 1) | (opt_mov == 2)) {
 				double moves_ij_t = func_moves_cnt(source_y, subject_proposed, moves_arg, t_e_modified, t_i_arg, t_r_arg, para_priors_arg);
 				lh_square_modified.moves_sum_E.at(subject_proposed) = moves_ij_t;
 			}
@@ -10988,6 +10870,7 @@ inline int find_in_vec_int(int key_arg, vector<int> vec) {
 	return(rint);
 }
 /*-------------------------------------------------------*/
+
 
 
 
@@ -13407,10 +13290,7 @@ Rcpp::List infer_cpp() {
 			mcmc_update.nu_inf_update(lh_square_current, log_lh_current, kernel_mat_current, delta_mat_current, xi_U_current, xi_E_minus_current, xi_I_current, t_r_current, t_i_current, t_e_current, index_current, para_current, infected_source_current, norm_const_current, beta_ij_mat_current, para_priorsetc, para_scalingfactors, beta_ij_inf_current, beta_ij_susc_current, moves, i, rng, delta_mat_mov_current);
 		}
 
-		if (opt_mov == 1) {
-			mcmc_update.beta_m_update(lh_square_current, log_lh_current, xi_U_current, xi_E_minus_current, t_e_current, index_current, infected_source_current, para_current, para_priorsetc, para_scalingfactors, i, rng);
-		}
-		if (opt_mov == 2) {
+		if ((opt_mov == 1) | (opt_mov == 2)) {
 			mcmc_update.beta_m_update(lh_square_current, log_lh_current, xi_U_current, xi_E_minus_current, t_e_current, index_current, infected_source_current, para_current, para_priorsetc, para_scalingfactors, i, rng);
 		}
 
