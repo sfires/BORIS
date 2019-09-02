@@ -125,8 +125,8 @@ infer.default <- function(covariates = NULL,
   epi.data <- covariates
   #head(epi.data)
   
-  epi.data$t_i <- epi.data$t_o - 1
-  epi.data$t_e <- epi.data$t_i - 2
+  #epi.data$t_i <- epi.data$t_o - 1
+  #epi.data$t_e <- epi.data$t_i - 2
   
   epi.data$ftype0 <- 0
   epi.data$ftype0[epi.data$ftype == 0] <- 1
@@ -169,7 +169,7 @@ infer.default <- function(covariates = NULL,
       if (substr(dnaPath, nchar(dnaPath), nchar(dnaPath) ) != slash ){
         dnaPath <- paste0(dnaPath, slash, "gen_inputs" , slash)  
       } else {
-        dnaPath <- paste0(dnaPath, "gen_nputs" , slash)  
+        dnaPath <- paste0(dnaPath, "gen_inputs" , slash)  
       }
     } else {
       if (substr(dnaPath, nchar(dnaPath), nchar(dnaPath) ) != slash ){
@@ -209,7 +209,7 @@ infer.default <- function(covariates = NULL,
   write.table(index.out[1:2,], paste0(inputPath, "/index.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
   
   ##t_sample.txt
-  t_sample<-matrix(covariates$t_s, nrow=parsAux$n)
+  t_sample<-matrix(t.sample, nrow=parsAux$n)
   write.table(t_sample, paste0(inputPath, "/t_sample.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
   
   ##seq_fmd.txt

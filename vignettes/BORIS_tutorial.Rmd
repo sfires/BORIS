@@ -277,6 +277,12 @@ The following inputs are required to run an outbreak reconstruction and inferenc
 
 In the following example, we will wrangle the data from the previous simulation into the required format, to show the process. The code can also be adapted to empirical inputs from an observed outbreak. Or run from the stored example input data pointed to in the help, i.e. `data(infer.epi.input)`.
 
+Typically, when working with empirical data, the onset of infectiousness and timing of exposure are unobserved and initial values have to be estimated by backwards
+calculation from the day clinical signs are first observed on a farm. This can be done stochastically, using Gamma distributions to represent the incubation period from exposure (t_e) to onset day, and once exposure date is estimated, the latent period from exposure (t_e) to commencement of infectiousness (t_i). 
+
+Here, as we're working with simulated data, we will assume that exposure has 
+occurred 24 hours before the onset of infectiousness for all infected farms. 
+
 \newpage
 
 ```{r inf_setup1}
@@ -285,11 +291,9 @@ library(BORIS)
 #use the epidemiological data from the previous simulation run
 epi.data<-as.data.frame(sim.out$epi.sim)
 
-#produce the required temporal fields. Here we are assuming that 
-#onset of infectiousness typically occurs 24 hours before the 
-#first clinical signs
-epi.data$t_o <- floor(epi.data$t_i) + 1
-epi.data$t_s <- round(sim.out$t_sample, 0)
+#produce the required initial values for the temporal fields.
+#assume that exposure has occurred 24 hours before the onset of infectiousness:
+epi.data$t_e <- epi.data$t_i - 1
 epi.data$t_r <- round(epi.data$t_r, 0)
 
 #wrangle the farm type variables into the required format
@@ -299,7 +303,7 @@ epi.data$ftype[epi.data$ftype1 == 1] <- 1
 epi.data$ftype[epi.data$ftype2 == 1] <- 2
 
 #keep just the desired columns, re-ordered as required
-epi.data<-epi.data[,c('k','coor_x','coor_y','t_o','t_s','t_r','ftype','herdn')]
+epi.data<-epi.data[,c('k','coor_x','coor_y','t_e','t_i','t_r','ftype','herdn')]
 head(epi.data)
 ```
 
@@ -316,8 +320,8 @@ for (i in 1:nrow(epi.data)){
 
   epi.data$k[i]
   
-  #identify the pool of possible sources with earlier onset times
-  pool_source<- epi.data$k [which(epi.data$t_o<epi.data$t_o[i] & epi.data$t_r>epi.data$t_o[i])]
+  #identify the pool of possible sources with earlier initial exposure times
+  pool_source<- epi.data$k [which(epi.data$t_e<epi.data$t_e[i] & epi.data$t_r>epi.data$t_e[i])]
 
   #randomly assign an infection source is there are any in the pool
   if (length(pool_source)>1) epi.data$initial_source[i] <- sample(pool_source,1) 
