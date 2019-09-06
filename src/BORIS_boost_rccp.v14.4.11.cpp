@@ -509,10 +509,7 @@ extern int debug_sim; //print full debug outputs
 extern int seed_sim; //universal seed for random number generator
 extern int opt_k80_sim; //1 = reformulated K80 to match paper (0 = Lau original, secondary reference)
 extern int opt_betaij_sim; //1 = farm-level covariates incorporated into beta (0 = Lau original), 2 = normalised
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 extern int opt_mov_sim; //1 = contact-tracing incorporated into betaij (0 = Lau original)
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 struct para_aux_struct {
@@ -521,11 +518,8 @@ struct para_aux_struct {
 	double t_max, unassigned_time, sample_range;
 	int partial_seq_out, n_base_part, n_index = 1;
 	string latent_type, kernel_type, coord_type;
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	int opt_mov; //1 = contact-tracing incorporated into betaij (0 = Lau original)
 	int n_mov; // total number of contact movements
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
 };
 
 
@@ -533,10 +527,7 @@ struct para_key_struct {
 	double alpha, beta, a, b, c, d, k_1, mu_1, mu_2, p_ber;
 	double rho_susc1, rho_susc2, phi_inf1, phi_inf2; //farm type susceptibility and infectivity parameters
 	double tau_susc, nu_inf; // farm size non-linear effect on susceptibility and infectivity
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	double beta_m; // the effect on likelihood for each traced movement between a pair of infected premises
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 };
 
 
@@ -550,10 +541,8 @@ struct epi_struct_sim {
 	vector<int> status;  //1=S, 2=E, 3=I,4=R
 	vector<double> q; //Sellke thresholds (see page 21 of Lau Thesis, 2.1.2)
 	vector<double> ric, t_next; //remaining infection challenge needed to get infection and time of next event (exposure/infection)
-
+	vector<double> lat_period, inf_period; //latent period, infectious period
 };
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct mov_struct { // structure to hold edgelist (contact-traced movement data)
 
@@ -562,8 +551,6 @@ struct mov_struct { // structure to hold edgelist (contact-traced movement data)
 	vector<double> t_m; // day of the movement, from t0 (on same time scale as t_e, etc.)
 
 };
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct nt_struct_sim {
 
@@ -592,10 +579,7 @@ private:
 	double mu_1_Cepi, mu_2_Cepi;
 	double rho_susc1_Cepi, rho_susc2_Cepi, phi_inf1_Cepi, phi_inf2_Cepi;
 	double tau_susc_Cepi, nu_inf_Cepi;
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	double beta_m_Cepi;
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 	double sample_range_Cepi;
 	string kernel_type_Cepi;
@@ -634,10 +618,7 @@ public:
 		phi_inf2_Cepi = para_key_Cepi.phi_inf2;
 		tau_susc_Cepi = para_key_Cepi.tau_susc;
 		nu_inf_Cepi = para_key_Cepi.nu_inf;
-
-		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		beta_m_Cepi = para_key_Cepi.beta_m;
-		////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		t_max_Cepi = para_other_Cepi.t_max;
 		unassigned_time_Cepi = para_other_Cepi.unassigned_time;
@@ -667,10 +648,13 @@ public:
 
 	void func_t_next(mov_struct&, epi_struct_sim&, vector<int>, double, const vector<double>&, int, vector< vector<double> >&, rng_type & rng_arg); //update times of next event for each remaining susceptible
 
+	void func_ric_j(int, mov_struct&, epi_struct_sim&, vector<int>, vector<int>, const vector<double>&, double, vector< vector<double> >&, rng_type & rng_arg); // function prototype for calculating remaining infection challenged needed to get infection
+
+	void func_t_next_j(int, mov_struct&, epi_struct_sim&, vector<int>, double, const vector<double>&, int, vector< vector<double> >&, rng_type & rng_arg); //update times of next event for each remaining susceptible
+
 	void func_status_update(epi_struct_sim&, vector<int>, rng_type & rng_arg); // function prototype for updating status
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	void func_time_update(mov_struct&, epi_struct_sim&, vector<int>&, vector<int>&, vector<int>&, vector <int>&, vector<int>, double, const vector<double>&, nt_struct_sim&, vector<int>&, rng_type & rng_arg); // function prototype for assigning the event time to right places & updating the vectors regarding infectious status
-   ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	void seq_update_source(nt_struct_sim&, int, rng_type & rng_arg); // sample sequences at sampling time of single subject
 	void seq_update_pair(nt_struct_sim&, int, int, double, rng_type & rng_arg); // update sequences for infectious-infected pair
@@ -684,12 +668,9 @@ void IO_para_aux(para_aux_struct&);
 void IO_para_key(para_key_struct&);
 //
 void IO_para_epi(epi_struct_sim&, para_aux_struct&);
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
+//
 void IO_para_mov(mov_struct&, para_aux_struct&);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 
 double func_kernel_sim(double, double, double, double, double, string, string); // function prototype for calculating kernel distance
 
@@ -715,7 +696,6 @@ double rnorm_sim(double mean, double sd, rng_type& rng_arg);
 //double rexp_sim(double rate, rng_type& rng_arg);
 int edf_sample_sim(vector<double> vec, rng_type& rng_arg);
 //--------------------------
-
 
 
 
@@ -11474,7 +11454,12 @@ void epi_functions::func_t_next(mov_struct& mov_data_arg, epi_struct_sim& epi_da
 		//gsl_rng *r_c = gsl_rng_alloc (T_c); // r is pointer points to an object with Type T
 		//gsl_rng_set (r_c, seed_Cepi*k_arg); // set a seed
 		//t_next = epi_data_arg.t_e.at(k_arg)+ func_latent_ran(r_c,a_Cepi,b_Cepi);
-			t_next = epi_data_arg.t_e.at(k_arg) + func_latent_ran(rng_arg, a_Cepi, b_Cepi);
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//t_next = epi_data_arg.t_e.at(k_arg) + func_latent_ran(rng_arg, a_Cepi, b_Cepi);
+			t_next = epi_data_arg.t_e.at(k_arg) + epi_data_arg.lat_period.at(k_arg);
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 			//gsl_rng_free(r_c);
 
 			//t_next = epi_data_arg.t_e.at(k_arg)+ gsl_ran_gamma(r_Cepi,a_Cepi,b_Cepi);
@@ -11487,7 +11472,12 @@ void epi_functions::func_t_next(mov_struct& mov_data_arg, epi_struct_sim& epi_da
 		//gsl_rng *r_c = gsl_rng_alloc (T_c); // r is pointer points to an object with Type T
 		//gsl_rng_set (r_c, seed_Cepi*k_arg); // set a seed
 		//t_next = epi_data_arg.t_i.at(k_arg) + gsl_ran_weibull(r_c,c_Cepi,d_Cepi);
-			t_next = epi_data_arg.t_i.at(k_arg) + rweibull_sim(c_Cepi, d_Cepi, rng_arg);
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//t_next = epi_data_arg.t_i.at(k_arg) + rweibull_sim(c_Cepi, d_Cepi, rng_arg);
+			t_next = epi_data_arg.t_i.at(k_arg) + epi_data_arg.inf_period.at(k_arg);
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 			//gsl_rng_free(r_c);
 
 
@@ -11507,6 +11497,141 @@ void epi_functions::func_t_next(mov_struct& mov_data_arg, epi_struct_sim& epi_da
 	}
 
 }
+
+//----------------------
+
+void epi_functions::func_ric_j(int k_arg, mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int> uninfected_arg, vector<int> once_infectious_arg, const vector<double>& norm_const_arg, double t_now_arg, vector< vector<double> >& beta_ij_mat_arg, rng_type & rng_arg) {
+
+
+
+	double ric = 0.0;
+
+
+	switch (int(once_infectious_arg.size() == 0)) {
+	case 1: {  //there are as yet none infected, just background pressure (alpha)
+		ric = epi_data_arg.q.at(k_arg) - alpha_Cepi * t_now_arg;
+
+		break;
+	}
+
+	case 0: {  //background pressure (alpha) + pressure from those infectious by t_now for the duration of exposure
+
+		double beta_ij_cumulative = 0.0;
+		double duration_exposure = 0.0;
+		double duration_exposure_mov = 0.0;
+		double mov_ij_cumulative = 0;
+
+
+		for (int i = 0; i <= ((int)once_infectious_arg.size() - 1); i++) {
+			if (epi_data_arg.t_r.at(once_infectious_arg.at(i)) != unassigned_time_Cepi) {
+				duration_exposure = epi_data_arg.t_r.at(once_infectious_arg.at(i)) - epi_data_arg.t_i.at(once_infectious_arg.at(i));
+				duration_exposure_mov = func_mov_exp(once_infectious_arg.at(i), k_arg, mov_data_arg, epi_data_arg.t_e, epi_data_arg.t_i, epi_data_arg.t_r, epi_data_arg.t_r.at(once_infectious_arg.at(i)), t_now_arg);
+
+			}
+
+			if (epi_data_arg.t_r.at(once_infectious_arg.at(i)) == unassigned_time_Cepi) {
+				duration_exposure = t_now_arg - epi_data_arg.t_i.at(once_infectious_arg.at(i));
+				duration_exposure_mov = func_mov_exp(once_infectious_arg.at(i), k_arg, mov_data_arg, epi_data_arg.t_e, epi_data_arg.t_i, epi_data_arg.t_r, t_now_arg, t_now_arg);
+			}
+
+			if (opt_betaij_sim == 0) {
+				beta_ij_cumulative = beta_ij_cumulative + (duration_exposure)*distance_mat_Cepi[k_arg][once_infectious_arg.at(i)] / norm_const_arg.at(once_infectious_arg.at(i)); //the beta contribution inside the sum over all infectious at time_now
+			}
+
+			if (opt_betaij_sim == 1) {
+				beta_ij_cumulative = beta_ij_cumulative + (duration_exposure)*beta_ij_mat_arg[once_infectious_arg.at(i)][k_arg] * distance_mat_Cepi[k_arg][once_infectious_arg.at(i)] / norm_const_arg.at(once_infectious_arg.at(i)); //the beta contribution inside the sum over all infectious at time_now
+			}
+
+			if (opt_mov_sim == 0) {
+				mov_ij_cumulative = 0;
+			}
+
+			if (opt_mov_sim == 1) {
+				mov_ij_cumulative = mov_ij_cumulative + duration_exposure_mov;
+			}
+
+		}
+
+
+		ric = epi_data_arg.q.at(k_arg) - alpha_Cepi * t_now_arg - beta_Cepi * beta_ij_cumulative - beta_m_Cepi * mov_ij_cumulative;
+
+		break;
+	}
+	}
+
+	epi_data_arg.ric.at(k_arg) = ric;
+
+
+
+
+
+	//return(ric);
+
+}
+
+//----------------------
+
+void epi_functions::func_t_next_j(int k_arg, mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int> infectious_arg, double t_now_arg, const vector<double>& norm_const_arg, int loop_count_arg, vector< vector<double> >& beta_ij_mat_arg, rng_type & rng_arg) {
+
+	int num_infectious = infectious_arg.size();
+
+	double t_next = unassigned_time_Cepi;
+
+
+	switch (int((num_infectious) >= 1)) {
+	case 1: {
+		double beta_ij_now = 0.0; // the additional (secondary) spatial-related contribution to the infectious pressure, from each of those infectious at time_now
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		int mov_ij_now = 0;
+		double beta_m_ij_now = 0.0; // the additional (secondary) movement-related contribution to the infectious pressure, from each of those infectious at time_now
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		for (int i = 0; i <= (num_infectious - 1); i++) {
+			if (opt_betaij_sim == 0) {
+				beta_ij_now = beta_ij_now + distance_mat_Cepi[k_arg][infectious_arg.at(i)] / norm_const_arg.at(infectious_arg.at(i));  //component within the sum over all infectious
+			}
+			if (opt_betaij_sim == 1) {
+				beta_ij_now = beta_ij_now + beta_ij_mat_arg[infectious_arg.at(i)][k_arg] * distance_mat_Cepi[k_arg][infectious_arg.at(i)] / norm_const_arg.at(infectious_arg.at(i));  //component within the sum over all infectious
+			}
+
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
+			if (opt_mov_sim == 0) {
+				mov_ij_now = 0;
+			}
+
+			if (opt_mov_sim == 1) {
+				mov_ij_now = mov_ij_now + func_mov_cnt(infectious_arg.at(i), k_arg, mov_data_arg, epi_data_arg.t_e, epi_data_arg.t_i, epi_data_arg.t_r, t_now_arg);
+			}
+			////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+		}
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		if (opt_mov_sim == 0) {
+			beta_ij_now = beta_Cepi * beta_ij_now; //any components outside the sum (i.e. base beta)
+			t_next = t_now_arg + epi_data_arg.ric.at(k_arg) / (alpha_Cepi + beta_ij_now);
+		}
+		if (opt_mov_sim == 1) {
+			beta_ij_now = beta_Cepi * beta_ij_now; //any components outside the sum (i.e. base beta)
+			beta_m_ij_now = beta_m_Cepi * mov_ij_now;
+			t_next = t_now_arg + epi_data_arg.ric.at(k_arg) / (alpha_Cepi + beta_ij_now + beta_m_ij_now);
+		}
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		break;
+	}
+
+	case 0: {
+		t_next = t_now_arg + epi_data_arg.ric.at(k_arg) / (alpha_Cepi); //time until infected at background rate
+		break;
+	}
+	}
+
+
+	epi_data_arg.t_next.at(k_arg) = t_next;
+
+
+
+}
+
 
 //----------------------
 
@@ -11564,7 +11689,8 @@ void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& e
 
 		case 2: {
 			epi_data_arg.t_e.at(ind_now_arg.at(i)) = t_now_arg;
-
+			epi_data_arg.lat_period.at(ind_now_arg.at(i)) = func_latent_ran(rng_arg, a_Cepi, b_Cepi);
+			epi_data_arg.inf_period.at(ind_now_arg.at(i)) = rweibull_sim(c_Cepi, d_Cepi, rng_arg);
 			uninfected_arg.erase(find(uninfected_arg.begin(), uninfected_arg.end(), ind_now_arg.at(i)));
 
 			//-------
@@ -12669,8 +12795,6 @@ double roundx_sim(double x, int y) {
 	return x;
 }
 
-//---
-
 
 
 
@@ -13710,11 +13834,7 @@ Rcpp::List sim_cpp() {
 	opt_k80_sim = para_other.opt_k80;
 	opt_betaij_sim = para_other.opt_betaij;
 	debug_sim = para_other.debug;
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	opt_mov_sim = para_other.opt_mov;
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 
 	para_key_struct para_key;
@@ -13755,15 +13875,11 @@ Rcpp::List sim_cpp() {
 	epi_struct_sim epi_data; // epi_struct is a user-defined data structure in the header file
 	IO_para_epi(epi_data, para_other);
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	mov_struct mov_data; // mov_struct is a user-defined data structure in the header file
 	if (opt_mov_sim == 1) {
 		IO_para_mov(mov_data, para_other);
 	}
-
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 	//double coordinate[n][2]; // coordinates of the subjects
@@ -13782,6 +13898,8 @@ Rcpp::List sim_cpp() {
 	epi_data.q.resize(para_other.n);
 	epi_data.ric.resize(para_other.n);
 	epi_data.t_next.resize(para_other.n);
+	epi_data.lat_period.resize(para_other.n);
+	epi_data.inf_period.resize(para_other.n);
 
 	//myfile.open((string(PATH2)+string("sellkes.txt")).c_str(),ios::app);
 	//myfile << "k" << "," << "q" << endl;
@@ -13799,6 +13917,8 @@ Rcpp::List sim_cpp() {
 		epi_data.q.at(i) = rweibull_sim(1.0, 1.0, rng_sim); //set sellke thresholds
 		epi_data.ric.at(i) = epi_data.q.at(i); // the remaining infective challenge needed to get infected (i.e.,from S to E)
 		epi_data.t_next.at(i) = para_other.unassigned_time; // time of next event
+		epi_data.lat_period.at(i) = func_latent_ran(rng_sim, para_key.a, para_key.b);
+		epi_data.inf_period.at(i) = rweibull_sim(para_key.c, para_key.d, rng_sim);
 
 		//myfile << epi_data.k.at(i) << "," << epi_data.q.at(i) << endl;
 	}
@@ -14195,19 +14315,67 @@ Rcpp::List sim_cpp() {
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		epi_func.func_ric(mov_data, epi_data, uninfected, once_infectious, norm_const, t_now, beta_ij_mat, rng_sim); // calculate the remaining challenges needed to get infected
 		epi_func.func_t_next(mov_data, epi_data, infectious, t_now, norm_const, loop_count, beta_ij_mat, rng_sim); // calculate the times of next event
+
+		//t_now = *min_element(epi_data.t_next.begin(), epi_data.t_next.end());
+
+		//find minimum t_next																								//find minimum of vector
+		double t_next_min;
+		t_next_min = *min_element(epi_data.t_next.begin(), epi_data.t_next.end());
+
+
+		if (opt_mov_sim == 1) {
+			//if a movement before next t_next then an exposure could occur at that point
+			//check if any movements onto an S before t_next.(S)
+
+			vector<int> xi_S_movt; //each S that received any movts from an I between t_now and t_next_min, used later to determine type of change at t_next
+			for (int j = 0; j <= int(uninfected.size() - 1); j++) {
+
+				int k_arg = uninfected.at(j);
+				vector<double> t_ms_k; //timing of any movements onto k from an I in appropriate timeframes
+
+				for (int m = 0; m <= (para_other.n_mov - 1); m++) {
+					if (mov_data.to_k.at(m) == k_arg) {
+						if ((epi_data.status.at(mov_data.from_k.at(m)) == 3) &&  //from an infective
+							(mov_data.t_m.at(m) > t_now) &&						 //between t_now and next proposed event time
+							(mov_data.t_m.at(m) <= t_next_min)) {
+							t_ms_k.push_back(mov_data.t_m.at(m));
+						}
+					}
+				}
+
+				if (t_ms_k.size() > 0) {
+					xi_S_movt.push_back(k_arg);
+
+					double t_prop;
+					t_prop = *min_element(t_ms_k.begin(), t_ms_k.end());
+					//if so recalc its ric and t_next
+					if (t_prop < t_next_min) {
+						epi_func.func_ric_j(k_arg, mov_data, epi_data, uninfected, once_infectious, norm_const, t_prop, beta_ij_mat, rng_sim); // calculate the remaining challenges needed to get infected
+						epi_func.func_t_next_j(k_arg, mov_data, epi_data, infectious, t_prop, norm_const, loop_count, beta_ij_mat, rng_sim); // calculate the times of next event
+					}
+				}
+
+			}
+
+			//recalc and set t_now as t_next_min
+			t_next_min = *min_element(epi_data.t_next.begin(), epi_data.t_next.end());
+
+		}
+
+		t_now = t_next_min;
+
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
-		t_now = *min_element(epi_data.t_next.begin(), epi_data.t_next.end());
 
 		if ((debug_sim == 1) & (loop_count == 100)) { //checksum based on t_now at 100th cycle,
 			if (opt_betaij_sim == 0 && opt_mov_sim == 0) {
-				cout << "t_now check (vanilla): " << roundx_sim(abs((7.86191 - t_now)*1e5), 0) << endl; //original
+				cout << "t_now check (vanilla): " << 18.31168342630719069 - t_now << endl; //original
 			}
 			if (opt_betaij_sim == 1 && opt_mov_sim == 0) {
-				cout << "t_now check (betaij): " << roundx_sim(abs((10.12932 - t_now)*1e5), 0) << endl; //original
+				cout << "t_now check (betaij): " << 28.0195892480458193 - t_now << endl; //original
 			}
 			if (opt_betaij_sim == 0 && opt_mov_sim == 1) {
-				cout << "t_now check (movt): " << roundx_sim(abs((15.14894 - t_now)*1e5), 0) << endl;
-				//cout << "t_now check (movt): " << 0 - t_now << endl;
+				cout << "t_now check (movt): " << 26.17170870820149214 - t_now << endl;
 			}
 		}
 
@@ -14364,6 +14532,14 @@ Rcpp::List sim_cpp() {
 		myfile << epi_data.k.at(i) << "," << epi_data.coor_x.at(i) << "," << epi_data.coor_y.at(i) << "," << epi_data.t_e.at(i) << "," << epi_data.t_i.at(i) << "," << epi_data.t_r.at(i) << "," << epi_data.ftype0.at(i) << "," << epi_data.ftype1.at(i) << "," << epi_data.ftype2.at(i) << "," << epi_data.herdn.at(i) << endl;
 	}
 	myfile.close();
+	if (opt_mov_sim == 1) {
+		myfile.open((string(PATH2) + string("mov_inputs.csv")).c_str(), ios::app);
+		myfile << "from_k" << "," << "to_k" << "," << "t_m" << endl;
+		for (int i = 0; i <= (para_other.n_mov - 1); i++) {
+			myfile << mov_data.from_k.at(i) << "," << mov_data.to_k.at(i) << "," << mov_data.t_m.at(i) << endl;
+		}
+		myfile.close();
+	}
 
 	/*
 	myfile.open((string(PATH2) + string("epi_other.csv")).c_str(), ios::app);
@@ -14587,7 +14763,6 @@ Rcpp::List sim_cpp() {
 	myfile_out.open((string(PATH2) + string("sampled_perct.txt")).c_str(), ios::out);
 	myfile_out << ((double)total_sampled) / (double)xi_E.size();
 	myfile_out.close();
-
 
 	/*----------------------------*/
 

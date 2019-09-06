@@ -104,7 +104,7 @@ sim.default <- function(epi.inputs = NULL,
   
   ##parameters_key.csv
   parsKey <- data.frame(parsKey)
-  write.table(parsKey, file = paste0(inputPath, "/parameters_key.csv", sep=''), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = names(parsAux) )  
+  write.table(parsKey, file = paste0(inputPath, "/parameters_key.csv", sep=''), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = names(parsKey) )  
 
   ##parameters_other.csv
   parsAux <- data.frame(parsAux)

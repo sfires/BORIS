@@ -1,8 +1,8 @@
 Package: BORIS
 Type: Package
 Title: Bayesian Outbreak Reconstruction Inference and Simulation
-Version: 1.1.7
-Date: 2019-09-02
+Version: 1.1.8
+Date: 2019-09-06
 Authors@R: c(
     person(given = "Simon",
            family = "Firestone",
@@ -17,7 +17,7 @@ Authors@R: c(
     person(given = "Gavin", family = "Gibson", role = "aut"),
     person(given = "Glenn", family = "Marion", role = "aut"),
     person(given = "George", family = "Streftaris", role = "aut"),
-    person(given = "Lewis", family = "Stone", role = "aut"),
+    person(given = "Lewi", family = "Stone", role = "aut"),
     person(given = "Mark A.", family = "Stevenson", role = "aut")
     )
 Maintainer@R: person(given = "Simon",
