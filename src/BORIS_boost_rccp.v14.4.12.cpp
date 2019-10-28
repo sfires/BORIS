@@ -479,7 +479,6 @@ double rnorm(double mean, double sd, rng_type& rng_arg);
 int edf_sample(vector<double> vec, rng_type& rng_arg);
 //--------------------------
 
-
 //--------------------------
 /*- SIM header------------*/
 //--------------------------
@@ -696,6 +695,7 @@ double rnorm_sim(double mean, double sd, rng_type& rng_arg);
 //double rexp_sim(double rate, rng_type& rng_arg);
 int edf_sample_sim(vector<double> vec, rng_type& rng_arg);
 //--------------------------
+
 
 
 
@@ -1264,6 +1264,7 @@ void IO_parascalingfactors(para_scaling_factors& para_scaling_factors_arg) { // 
 
 
 
+
 /*----------------------------*/
 /*- functions ----------------*/
 /*----------------------------*/
@@ -1371,8 +1372,32 @@ long double func_kernel(double x_1, double y_1, double x_2, double y_2, double k
 	return(func_ker);
 }
 
-/*-------------------------------------------*/
 
+/*-------------------------------------------*/
+inline double pdf_weibull_limit(double shape, double scale, double q) {
+	double pdf_weibull = 0.0;
+	pdf_weibull = pdf(weibull_mdist(shape, scale), q);
+
+	if (pdf_weibull == 0) {
+		double dbl_min = std::numeric_limits< double >::min();
+		pdf_weibull = dbl_min;
+	}
+
+	return(pdf_weibull);
+}
+
+inline double cdf_weibull_limit(double shape, double scale, double q) {
+	double cdf_weibull = 0.0;
+	cdf_weibull = cdf(weibull_mdist(shape, scale), q);
+
+	if (cdf_weibull == 1) {
+		double dbl_min = std::numeric_limits< double >::min();
+		cdf_weibull = cdf_weibull - dbl_min;
+	}
+
+	return(cdf_weibull);
+}
+/*-------------------------------------------*/
 
 inline double func_beta_ij(double n_inf, double n_susc, double nu_inf_arg, double tau_susc_arg, double ftype0_inf, double ftype0_susc, double ftype1_inf, double ftype1_susc, double ftype2_inf, double ftype2_susc, double phi_inf1_arg, double phi_inf2_arg, double rho_susc1_arg, double rho_susc2_arg) {
 
@@ -2723,7 +2748,8 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 		for (int i = 0; i <= (int)(xi_R_Clh.size() - 1); i++) {
 
 			// lh_square_arg.f_R.at(xi_R_Clh.at(i)) = gsl_ran_weibull_pdf(t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)), c_Clh, d_Clh);
-			lh_square_arg.f_R.at(xi_R_Clh.at(i)) = pdf(weibull_mdist(d_Clh, c_Clh), t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)));
+			//lh_square_arg.f_R.at(xi_R_Clh.at(i)) = pdf(weibull_mdist(d_Clh, c_Clh), t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)));
+			lh_square_arg.f_R.at(xi_R_Clh.at(i)) = pdf_weibull_limit(d_Clh, c_Clh, t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)));
 
 			//lh_square_arg.f_R.at(xi_R_Clh.at(i)) = gsl_ran_exponential_pdf(t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)), c_Clh);
 			//lh_square_arg.f_R.at(xi_R_Clh.at(i)) = pdf(exp_mdist(1/c_Clh), t_r_Clh.at(xi_R_Clh.at(i)) - t_i_Clh.at(xi_R_Clh.at(i)));
@@ -2735,11 +2761,11 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 	if (xi_InR_Clh.size() >= 1) {   // loop over all that were infectious but not yet recovered by t_max
 		for (int i = 0; i <= (int)(xi_InR_Clh.size() - 1); i++) {
 
-			// lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 -  gsl_cdf_weibull_P(t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)), c_Clh, d_Clh);
-			lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - (pdf(weibull_mdist(d_Clh, c_Clh), t_max_Clh - t_i_Clh.at(xi_R_Clh.at(i))));
-
 			//lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 -  gsl_cdf_exponential_P(t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)), c_Clh);
-			lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - cdf(exp_mdist(1 / c_Clh), t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)));
+			// lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 -  gsl_cdf_weibull_P(t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)), c_Clh, d_Clh);
+			//lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - cdf(exp_mdist(1/c_Clh), t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)));
+			lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - cdf_weibull_limit(d_Clh, c_Clh, t_max_Clh - t_i_Clh.at(xi_R_Clh.at(i)));
+
 		}
 	}
 
@@ -3813,11 +3839,11 @@ void mcmc_UPDATE::c_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_R.at(xi_R_arg.at(i))); //subtract part of likelihood that would be updated below
 
-			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = gsl_ran_weibull_pdf(t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)), c_proposed, para_current_arg.d);
-			lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf(weibull_mdist(para_current_arg.d, c_proposed), t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
-
 			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = gsl_ran_exponential_pdf(t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)), c_proposed);
 			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf(exp_mdist(1/c_proposed), t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
+			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = gsl_ran_weibull_pdf(t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)), c_proposed, para_current_arg.d);
+			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf(weibull_mdist(para_current_arg.d, c_proposed), t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
+			lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf_weibull_limit(para_current_arg.d, c_proposed, t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_R.at(xi_R_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3828,11 +3854,11 @@ void mcmc_UPDATE::c_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //subtract part of likelihood that would be updated below
 
-			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_weibull_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed, para_current_arg.d);
-			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (pdf(weibull_mdist(para_current_arg.d, c_proposed), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
-
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed);
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf(exp_mdist(1/c_proposed), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
+			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_weibull_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed, para_current_arg.d);
+			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (cdf(weibull_mdist(para_current_arg.d, c_proposed), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
+			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf_weibull_limit(para_current_arg.d, c_proposed, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3906,7 +3932,8 @@ void mcmc_UPDATE::d_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_R.at(xi_R_arg.at(i))); //subtract part of likelihood that would be updated below
 
 			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = gsl_ran_weibull_pdf(t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)), para_current_arg.c, d_proposed);
-			lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf(weibull_mdist(d_proposed, para_current_arg.c), t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
+			//lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf(weibull_mdist(d_proposed, para_current_arg.c), t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
+			lh_square_modified.f_R.at(xi_R_arg.at(i)) = pdf_weibull_limit(d_proposed, para_current_arg.c, t_r_arg.at(xi_R_arg.at(i)) - t_i_arg.at(xi_R_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_R.at(xi_R_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3918,7 +3945,8 @@ void mcmc_UPDATE::d_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //subtract part of likelihood that would be updated below
 
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_weibull_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed, para_current_arg.d);
-			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (pdf(weibull_mdist(d_proposed, para_current_arg.c), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
+			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (cdf(weibull_mdist(d_proposed, para_current_arg.c), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
+			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf_weibull_limit(d_proposed, para_current_arg.c, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -6279,8 +6307,8 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 	switch (find(xi_R_arg.begin(), xi_R_arg.end(), subject_proposed) != (xi_R_arg.end())) { //return 1 when the subject is also in xi_R
 	case 1: {
 		log_lh_modified = log_lh_modified - log(lh_square_modified.f_R.at(subject_proposed)); //subtract part of likelihood that would be updated below
-	//	lh_square_modified.f_R.at(subject_proposed) = gsl_ran_weibull_pdf(t_r_arg.at(subject_proposed) - t_proposed, para_current_arg.c, para_current_arg.d);
-		lh_square_modified.f_R.at(subject_proposed) = pdf(exp_mdist(1 / para_current_arg.c), t_r_arg.at(subject_proposed) - t_proposed);
+		//	lh_square_modified.f_R.at(subject_proposed) = gsl_ran_weibull_pdf(t_r_arg.at(subject_proposed) - t_proposed, para_current_arg.c, para_current_arg.d);
+		lh_square_modified.f_R.at(subject_proposed) = pdf_weibull_limit(para_current_arg.d, para_current_arg.c, t_r_arg.at(subject_proposed) - t_proposed);
 		log_lh_modified = log_lh_modified + log(lh_square_modified.f_R.at(subject_proposed));
 		break;
 	}
@@ -6294,7 +6322,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 	case 1: {
 		log_lh_modified = log_lh_modified - log(lh_square_modified.f_InR.at(subject_proposed)); //subtract part of likelihood that would be updated below
 		//lh_square_modified.f_InR.at(subject_proposed) = 1.0 -  gsl_cdf_weibull_P(t_max_CUPDATE - t_proposed, para_current_arg.c, para_current_arg.d);
-		lh_square_modified.f_InR.at(subject_proposed) = 1.0 - cdf(exp_mdist(1 / para_current_arg.c), t_max_CUPDATE - t_proposed);
+		lh_square_modified.f_InR.at(subject_proposed) = 1.0 - cdf_weibull_limit(para_current_arg.d, para_current_arg.c, t_max_CUPDATE - t_proposed);
 		log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(subject_proposed));
 
 		break;
@@ -10853,7 +10881,6 @@ inline int find_in_vec_int(int key_arg, vector<int> vec) {
 
 
 
-
 /*----------------------------*/
 /*- SIM functions ------------*/
 /*----------------------------*/
@@ -11303,7 +11330,7 @@ void initialize_beta_ij_mat(vector< vector<double> >& beta_ij_mat_arg, para_aux_
 
 void epi_functions::func_ric(mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int> uninfected_arg, vector<int> once_infectious_arg, const vector<double>& norm_const_arg, double t_now_arg, vector< vector<double> >& beta_ij_mat_arg, rng_type & rng_arg) {
 
-	int num_uninfected = uninfected_arg.size();
+	int num_uninfected = int(uninfected_arg.size());
 
 	switch (int(num_uninfected >= 1)) {
 
@@ -11389,7 +11416,7 @@ void epi_functions::func_ric(mov_struct& mov_data_arg, epi_struct_sim& epi_data_
 void epi_functions::func_t_next(mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int> infectious_arg, double t_now_arg, const vector<double>& norm_const_arg, int loop_count_arg, vector< vector<double> >& beta_ij_mat_arg, rng_type & rng_arg) {
 
 
-	int num_infectious = infectious_arg.size();
+	int num_infectious = int(infectious_arg.size());
 
 	for (int i = 0; i <= (n_Cepi - 1); i++) {
 
@@ -11573,7 +11600,7 @@ void epi_functions::func_ric_j(int k_arg, mov_struct& mov_data_arg, epi_struct_s
 
 void epi_functions::func_t_next_j(int k_arg, mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int> infectious_arg, double t_now_arg, const vector<double>& norm_const_arg, int loop_count_arg, vector< vector<double> >& beta_ij_mat_arg, rng_type & rng_arg) {
 
-	int num_infectious = infectious_arg.size();
+	int num_infectious = int(infectious_arg.size());
 
 	double t_next = unassigned_time_Cepi;
 
@@ -11640,7 +11667,7 @@ vector<int> min_max_functions::min_position_double(vector<double> v, double min_
 	vector<int> min_v;
 	min_v.reserve(max_leng);
 
-	int m = v.size();
+	int m = int(v.size());
 
 	for (int i = 0; i <= (m - 1); i++) {
 		if (v.at(i) == min_t) min_v.push_back(i);
@@ -11657,7 +11684,7 @@ vector<int> min_max_functions::min_position_double(vector<double> v, double min_
 
 void epi_functions::func_status_update(epi_struct_sim& epi_data_arg, vector<int> ind_now_arg, rng_type & rng_arg) {
 
-	int num_now = ind_now_arg.size();
+	int num_now = int(ind_now_arg.size());
 
 	for (int i = 0; i <= (num_now - 1); i++) {
 		epi_data_arg.status.at(ind_now_arg.at(i)) = min(4, epi_data_arg.status.at(ind_now_arg.at(i)) + 1); //increment by +1 up until 4 (i.e. R)
@@ -11669,8 +11696,8 @@ void epi_functions::func_status_update(epi_struct_sim& epi_data_arg, vector<int>
 void epi_functions::func_time_update(mov_struct& mov_data_arg, epi_struct_sim& epi_data_arg, vector<int>& once_infectious_arg, vector<int>& uninfected_arg, vector<int>& infectious_arg, vector <int>& infected_source_arg, vector<int> ind_now_arg, double t_now_arg, const vector<double>& norm_const_arg, nt_struct_sim& nt_data_arg, vector<int>& con_seq, rng_type & rng_arg) {
 
 
-	int num_now = ind_now_arg.size();
-	int num_infectious = infectious_arg.size();
+	int num_now = int(ind_now_arg.size());
+	int num_infectious = int(infectious_arg.size());
 
 	// const gsl_rng_type* T_c= gsl_rng_ranlux;  // T is pointer points to the type of generator
 	// gsl_rng *r_c = gsl_rng_alloc (T_c); // r is pointer points to an object with Type T
@@ -12795,7 +12822,7 @@ double roundx_sim(double x, int y) {
 	return x;
 }
 
-
+/*-------------------------------------------------------*/
 
 
 /*----------------------------------------------------------*/
@@ -13661,8 +13688,6 @@ Rcpp::List infer_cpp() {
 	myfile5_out.close();  //consensus sequence every n_output_gm cycles
 	myfile6_out.close();  //inferred sequences every n_output_gm cycles
 	myfile7_out.close();  //inferred sequence_timings every n_output_gm cycles
-
-	//------------------
 
 
   
@@ -14532,6 +14557,7 @@ Rcpp::List sim_cpp() {
 		myfile << epi_data.k.at(i) << "," << epi_data.coor_x.at(i) << "," << epi_data.coor_y.at(i) << "," << epi_data.t_e.at(i) << "," << epi_data.t_i.at(i) << "," << epi_data.t_r.at(i) << "," << epi_data.ftype0.at(i) << "," << epi_data.ftype1.at(i) << "," << epi_data.ftype2.at(i) << "," << epi_data.herdn.at(i) << endl;
 	}
 	myfile.close();
+
 	if (opt_mov_sim == 1) {
 		myfile.open((string(PATH2) + string("mov_inputs.csv")).c_str(), ios::app);
 		myfile << "from_k" << "," << "to_k" << "," << "t_m" << endl;
@@ -14540,7 +14566,6 @@ Rcpp::List sim_cpp() {
 		}
 		myfile.close();
 	}
-
 	/*
 	myfile.open((string(PATH2) + string("epi_other.csv")).c_str(), ios::app);
 	myfile << "q" << "," << "status" << ","  << endl;

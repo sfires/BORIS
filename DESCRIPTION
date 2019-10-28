@@ -1,8 +1,8 @@
 Package: BORIS
 Type: Package
 Title: Bayesian Outbreak Reconstruction Inference and Simulation
-Version: 1.1.8
-Date: 2019-09-06
+Version: 1.1.9
+Date: 2019-10-29
 Authors@R: c(
     person(given = "Simon",
            family = "Firestone",
