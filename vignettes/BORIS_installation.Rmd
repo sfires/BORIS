@@ -64,7 +64,7 @@ Go to the `Advanced system settings` on Windows and then click on `Environment V
 
 
 
-## Instructions for comiling from source on a Mac Computer
+## Instructions for compiling from source on a Mac Computer
 
 To compile and run `BORIS` from source on a Mac computer, try installing the latest version of `R`, `knitr` and `devtools`. `MacTeX` may also be required to compile the package vignettes and is available from [here](http://www.tug.org/mactex/).
 
@@ -79,7 +79,7 @@ Note: `knitr` and `rmarkdown` are recommended packages for building the package 
 
 
 ## References
-Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., under peer review. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. Proceedings of the Royal Society B: Biological Sciences.
+Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., 2019. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. bioRxiv, 835421. [https://doi.org/10.1101/835421](https://doi.org/10.1101/835421)
 
 Lau, M. S., G. Marion, G. Streftaris and G. Gibson, 2015: A systematic Bayesian integration of epidemiological and genetic data. PLoS Comput. Biol., 11, e1004633.
 

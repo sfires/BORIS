@@ -3,11 +3,17 @@ citHeader("To cite BORIS in publications, please use:")
 bibentry(bibtype = "Article",
          author = c(person("Firestone, S.M."),
                     person("Hayama, Y."),
-                    person("Bradhurst, R.A."),
+                    person("Lau, M.S."),
                     person("Yamamoto, T."),
-                    person("Tsutsui, T."),
-                    person("Stevenson, M.A.")),
+                    person("Nishi, T."),
+                    person("Bradhurst, R.A."),
+                    person("Demirhan, H."),
+                    person("Stevenson, M.A."),
+                    person("Tsutsui, T.")),
          year = "2019",
-         title = "Reconstructing outbreaks: a methods comparison of transmission network models",
-         journal = "Scientific Reports"
+         title = "Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates",
+         journal = "bioRxiv",
+         page = "735421"
 )
+
+, 2019. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. bioRxiv, 835421.
