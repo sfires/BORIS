@@ -25,7 +25,7 @@ Simon M. Firestone <simon.firestone@unimelb.edu.au>, Max S.Y. Lau, Saritha Kodik
 Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
 }
 \references{
-Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., under peer review. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. Proceedings of the Royal Society B: Biological Sciences.
+Firestone, S.M., Hayama, Y., Lau, M.S., Yamamoto, T., Nishi, T., Bradhurst, R.A., Demirhan, H., Stevenson, M.A., Tsutsui, T., 2019. Bayesian transmission network reconstruction for foot-and-mouth disease outbreaks incorporating farm-level covariates. bioRxiv, 835421.
 
 Firestone, S.M., Hayama, Y., Bradhurst, R.A., Yamamoto, T., Tsutsui, T., Stevenson, M.A., 2019. Reconstructing outbreaks: a methods comparison of transmission network models. Sci. Rep.
 

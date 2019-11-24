@@ -291,6 +291,9 @@ library(BORIS)
 #use the epidemiological data from the previous simulation run
 epi.data<-as.data.frame(sim.out$epi.sim)
 
+#make sure indexing is correct
+epi.data$k<-1:nrow(epi.data)-1
+
 #produce the required initial values for the temporal fields.
 #assume that exposure has occurred 24 hours before the onset of infectiousness:
 epi.data$t_e <- epi.data$t_i - 1
@@ -364,6 +367,10 @@ pars.aux <- data.frame('n' = nrow(epi.data),
                        'opt_ti_update' = 1,
                        'opt_mov' = 0,
                        stringsAsFactors = F)
+
+#once `t_max` is set, right censor all recovery times 
+epi.data$t_r[epi.data$t_r>pars.aux$t_max]<-pars.aux$t_max
+
 ```
 
 \vspace{12px}
@@ -522,7 +529,7 @@ seq_mat[seq_mat==4]<-"c"
 
 #write row.names to the sequence matrix object, including the 'k' 
 #and time of sampling. These will be used as tip labels
-row.names(seq_mat)<- paste0(epi.data$k, "_", epi.data$t_s)
+row.names(seq_mat)<- paste0(epi.data$k, "_", round(sim.out$t_sample,0))
 
 
 if(!dir.exists("gen_inputs")) {

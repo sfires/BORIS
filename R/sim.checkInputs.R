@@ -19,7 +19,7 @@ sim.checkInputs <- function(parsKey , parsAux){
   if ((parsKey[1, "beta_m"] < 0 ) | (parsKey[1, "beta_m"] > 30 )){ stop("The the secondary transmission rate by contact-related transmission/animal movement, beta_m, must be in between 0 and 30!")}
 
 # ---------------------------------------------------------- #
-  if ((parsAux[1, "n"] < 1) | (parsAux[1, "n"] > 500)){ stop("Population size, n, is out of acceptable range of [1 , 500]!")}
+  if ((parsAux[1, "n"] < 1) | (parsAux[1, "n"] > 50000)){ stop("Population size, n, is out of acceptable range of [1 , 50000]!")}
   if (!is.numeric(parsAux[1, "seed"]) | (parsAux[1, "seed"] < 1 )){ stop("The seed must be a positive integer!")}
   if ((parsAux[1, "n_base"] < 1 ) | (parsAux[1, "n_base"] > 10000 )){ stop("Number of bases (nucleotides) in length for a sequence, n_base,  is restricted between 1 and 10,000. For longer sequences, use only partial sequences of SNPs!")}
   if ((parsAux[1, "n_seq"] < 1 ) | (parsAux[1, "n_seq"] >10 )){ stop("Initial number of sequences expected for a farm, n_seq, must be in between 1 and 10. This is redefined if more memory needs to be allocated for specific farms, so best set as low as expected!")}

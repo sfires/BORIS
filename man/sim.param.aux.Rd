@@ -24,7 +24,7 @@ This data set is an example of the additional parameter inputs that shape the ou
     \item{sample_range}{The maximum possible delay between infection and sampling. Realistic upper bounds for some infectious diseases with overt clinical signs in naive populations can be assumed to be between 14-21 days.}
     \item{partial_seq_out}{Logical representing whether the genomic sequence data to be simulated is partial (\eqn{=}1) or complete (\eqn{=}0).}
     \item{n_base_part}{The partial sequence length, used if partial_seq_out\eqn{=}1.}
-    \item{n_index}{The number of indexes to be simulated. For a transmission tree with multifurcation use \eqn{ge}1.}
+    \item{n_index}{The number of indexes to be simulated. For a transmission tree with multifurcation use >=1.}
     \item{coord_type}{Coordinate system: decimal degrees (i.e. latitudes and longitudes) or cartesian (projected coordinate reference system) can take the values "\code{longlat}" / "\code{cartesian}"}
     \item{kernel_type}{Kernel type (string variable) that can take the values "\code{power_law}" / "\code{exponential}" / "\code{cauchy}" / "\code{gaussian}".}
     \item{latent_type}{Distribution type used for simulating the latent period. Presently only implemented for "\code{gamma}"}
