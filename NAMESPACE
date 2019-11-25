@@ -3,6 +3,7 @@
 S3method(infer,default)
 S3method(sim,default)
 export(infer)
+export(seqlookup)
 export(sim)
 importFrom(ape,read.dna)
 importFrom(utils,write.table)

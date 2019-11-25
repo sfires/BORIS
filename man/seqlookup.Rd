@@ -1,9 +1,9 @@
-\name{seq.lookup}
-\alias{seq.lookup}
+\name{seqlookup}
+\alias{seqlookup}
 \title{Function to lookup inferred sequence data post run}
 
 \description{
-\code{seq.lookup} after a run of The \code{infer} function, this function looks up the timings of the sequences for a specified individual in a specified  iteration, and the corresponding row numbers of the sequence data, for subsequent lookup.
+\code{seqlookup} after a run of The \code{infer} function, this function looks up the timings of the sequences for a specified individual in a specified  iteration, and the corresponding row numbers of the sequence data, for subsequent lookup.
 }
 
 \usage{
@@ -69,12 +69,12 @@ nt.seq[nt.seq==3]<-"t"
 nt.seq[nt.seq==4]<-"c"
 
 #use seq.lookup function to show timings of sequences recorded for individual with index `k` in iteration `it`
-seq.lookup(k=1, it=2,seq.ts=nt.t, accTable=accTable)$ts
+seqlookup(k=1, it=2,seq.ts=nt.t, accTable=accTable)$ts
 
 #show the first 10 nucleotides of the sequence data 
 #for the corresponding sequences for individual k
 #in iteration it
-nt.seq1[seq.lookup(k=1, it=2,seq.ts=nt.t1,
+nt.seq1[seqlookup(k=1, it=2,seq.ts=nt.t1,
                    accTable=accTable)$seq.ts,1:10]
 
 }
