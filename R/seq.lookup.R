@@ -1,3 +1,5 @@
+#' @export
+#' 
 seq.lookup<-function(k=0, it=1, seq.ts, accTable){
   ##looking up timings
   #no. of individuals
