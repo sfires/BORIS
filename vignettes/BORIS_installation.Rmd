@@ -30,13 +30,13 @@ knitr::opts_chunk$set(echo=T, warning=F, message=F,
 
 The `R` package `BORIS` utilises `boost` C++ libraries to generate the Markov chains for Bayesian implementation of the Lau model (see Lau et al., 2015 and [github.com/msylau](https://github.com/msylau/A-Systematic-Bayesian-Integration-of-Epidemiological-and-Genetic-Data)) with modifications (Firestone et al., 2019).
 
-To utilise `boost` and run `BORIS` from Windows and OS X binaries (i.e. `BORIS_x.x.x.zip` or `BORIS_x.x.x.tgz`), standard installation of the packages `Rcpp` and `BH` is sufficient.
+To utilise `boost` and run `BORIS` from Windows and OS X binaries (i.e. `BORIS_x.x.x.zip` or `BORIS_x.x.x.tgz`), standard installation of the packages `Rcpp`, `BH`, `devtools`, `knitr` and `rmarkdown` are required.
 
 In this manual, we explain installation of required external tools to compile and run `BORIS` from source on Windows. Once these additional libraries are installed and the required paths are set, installation of `BORIS` should be a straightforward task.
 
 
 
-## Instructions for comiling from source on a Windows Computer
+## Instructions for compiling from source on a Windows Computer
 
 To compile and run `BORIS` from source on a Windows computer, `Rtools` must be installed on the computer and environment variables for the system Path must be correctly specified.
 
@@ -72,10 +72,9 @@ To compile and run `BORIS` from source on a Mac computer, try installing the lat
 ## Instructions for Installing `BORIS` from GitHub
 
 Once all of the above has been setup, `BORIS` can be installed from the GitHub repository `https://github.com/sfires/BORIS` with the following `R` code:
-
+`library(devtools)`
 `install_github("sfires/BORIS", build_opts = c("--resave-data", "--no-manual"), build_vignettes = TRUE)`
 
-Note: `knitr` and `rmarkdown` are recommended packages for building the package vignettes.
 
 
 ## References

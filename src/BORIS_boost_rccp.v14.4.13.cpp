@@ -33,8 +33,8 @@ using namespace Rcpp;
 #define PATH1 "./inputs/"
 #define PATH2 "./outputs/"      /*output folder*/
 //if debugging, use explicit paths
-//#define PATH1 "C:/Data/Visual Studio/Projects/lau.seir.infer.boost/Debug/inputs/"
-//#define PATH2 "C:/Data/Visual Studio/Projects/lau.seir.infer.boost/Debug/outputs/"
+//#define PATH1 "C:/Users/sfirestone/OneDrive - The University of Melbourne/UM_data/Visual Studio/Projects/lau.seir.infer.boost/x64/Debug/inputs/"
+//#define PATH2 "C:/Users/sfirestone/OneDrive - The University of Melbourne/UM_data/Visual Studio/Projects/lau.seir.infer.boost/x64/Debug/outputs/"
 
 
 //set upper limits for to avoid memory allocation issues
@@ -73,7 +73,7 @@ extern int opt_latgamma; //1 = latent period from gamma distribution (0 = Lau or
 extern int opt_k80; //1 = reformulated K80 to match paper (0 = Lau original, secondary reference)
 extern int opt_betaij; //1 = farm-level covariates incorporated into betaij (0 = Lau original), 2 = normalised
 extern int opt_ti_update; //1 = update t_i (0 = Lau original)
-extern int opt_mov; //1 = contact-tracing incorporated into betaij (0 = Lau original)
+extern int opt_mov; //1 = contact-tracing incorporated into betaij (0 = Lau original), 2 = contact-tracing, time-independant
 
 //other required externals, dynamic version, requires declaration of extern here, definition in IO.cpp after IO_parapriorsetc function and then used in inference.cpp
 extern int ind_n_base_part;// used in IO_simpara
@@ -478,6 +478,7 @@ double rnorm(double mean, double sd, rng_type& rng_arg);
 //double rexp(double rate, rng_type& rng_arg);
 int edf_sample(vector<double> vec, rng_type& rng_arg);
 //--------------------------
+
 
 //--------------------------
 /*- SIM header------------*/
@@ -1265,6 +1266,7 @@ void IO_parascalingfactors(para_scaling_factors& para_scaling_factors_arg) { // 
 
 
 
+
 /*----------------------------*/
 /*- functions ----------------*/
 /*----------------------------*/
@@ -1374,6 +1376,7 @@ long double func_kernel(double x_1, double y_1, double x_2, double y_2, double k
 
 
 /*-------------------------------------------*/
+//functions to limit distributions to smallest possible value rather than zero, to avoid log(0) = -Inf errors
 inline double pdf_weibull_limit(double shape, double scale, double q) {
 	double pdf_weibull = 0.0;
 	pdf_weibull = pdf(weibull_mdist(shape, scale), q);
@@ -1386,16 +1389,40 @@ inline double pdf_weibull_limit(double shape, double scale, double q) {
 	return(pdf_weibull);
 }
 
-inline double cdf_weibull_limit(double shape, double scale, double q) {
-	double cdf_weibull = 0.0;
-	cdf_weibull = cdf(weibull_mdist(shape, scale), q);
+inline double surv_weibull_limit(double shape, double scale, double q) {
+	double surv_weibull = 0.0;
+	surv_weibull = 1 - cdf(weibull_mdist(shape, scale), q);
 
-	if (cdf_weibull == 1) {
-		double dbl_min = std::numeric_limits< double >::min();
-		cdf_weibull = cdf_weibull - dbl_min;
+	if (surv_weibull == 0) {
+		double dbl_m = std::numeric_limits< double >::min();
+		surv_weibull = dbl_m;
 	}
 
-	return(cdf_weibull);
+	return(surv_weibull);
+}
+
+inline double pdf_exp_limit(double rate, double q) {
+	double pdf_exp = 0.0;
+	pdf_exp = pdf(exp_mdist(rate), q);
+
+	if (pdf_exp == 0) {
+		double dbl_min = std::numeric_limits< double >::min();
+		pdf_exp = dbl_min;
+	}
+
+	return(pdf_exp);
+}
+
+inline double surv_exp_limit(double rate, double q) {
+	double surv_exp = 0.0;
+	surv_exp = 1 - cdf(exp_mdist(rate), q);
+
+	if (surv_exp == 0) {
+		double dbl_m = std::numeric_limits< double >::min();
+		surv_exp = dbl_m;
+	}
+
+	return(surv_exp);
 }
 /*-------------------------------------------*/
 
@@ -2342,13 +2369,20 @@ long double func_latent_pdf(double t, double lat_mu, double lat_var) {
 	if (opt_latgamma == 0) {
 		//func_lat_pdf = gsl_ran_gamma_pdf(t, lat_mu, lat_var);
 		func_lat_pdf = pdf(gamma_mdist(lat_mu, lat_var), t);
+		if (func_lat_pdf == 0) {
+			double dbl_min = std::numeric_limits< double >::min();
+			func_lat_pdf = dbl_min;
+		}
 	}
 	if (opt_latgamma == 1) {
 		double a_lat = lat_mu * lat_mu / lat_var; // when use GAMMA latent
 		double b_lat = lat_var / lat_mu;
 		//func_lat_pdf = gsl_ran_gamma_pdf(t, a_lat, b_lat);
 		func_lat_pdf = pdf(gamma_mdist(a_lat, b_lat), t);
-
+		if (func_lat_pdf == 0) {
+			double dbl_min = std::numeric_limits< double >::min();
+			func_lat_pdf = dbl_min;
+		}
 	}
 
 	// // double a_lat = log(lat_mu*lat_mu/(sqrt(lat_var +lat_mu*lat_mu))); // when use lognormal latent
@@ -2365,20 +2399,30 @@ long double func_latent_pdf(double t, double lat_mu, double lat_var) {
 }
 /*-------------------------------------------*/
 
-inline long double func_latent_cdf(double t, double lat_mu, double lat_var) {
+inline long double func_latent_surv(double t, double lat_mu, double lat_var) {
 
-	long double func_lat_cdf = 0.0;
+	long double func_lat_surv = 0.0;
 
 	//sf edit
 	if (opt_latgamma == 0) {
 		//func_lat_cdf = gsl_cdf_gamma_P(t, lat_mu, lat_var);
-		func_lat_cdf = cdf(gamma_mdist(lat_mu, lat_var), t);
+		func_lat_surv = 1 - cdf(gamma_mdist(lat_mu, lat_var), t);
+
+		if (func_lat_surv == 0) {
+			double dbl_min = std::numeric_limits< double >::min();
+			func_lat_surv = dbl_min;
+		}
 	}
 	if (opt_latgamma == 1) {
 		double a_lat = lat_mu * lat_mu / lat_var; // when use GAMMA latent
 		double b_lat = lat_var / lat_mu;
 		//func_lat_cdf = gsl_cdf_gamma_P(t, a_lat, b_lat);
-		func_lat_cdf = cdf(gamma_mdist(a_lat, b_lat), t);
+		func_lat_surv = 1 - cdf(gamma_mdist(a_lat, b_lat), t);
+
+		if (func_lat_surv == 0) {
+			double dbl_m = std::numeric_limits< double >::min();
+			func_lat_surv = dbl_m;
+		}
 	}
 
 	// // double a_lat = log(lat_mu*lat_mu/(sqrt(lat_var +lat_mu*lat_mu))); // when use lognormal latent
@@ -2391,7 +2435,7 @@ inline long double func_latent_cdf(double t, double lat_mu, double lat_var) {
 	//func_lat_cdf = gsl_cdf_exponential_P(t, lat_mu);
 
 
-	return(func_lat_cdf);
+	return(func_lat_surv);
 }
 /*-------------------------------------------*/
 
@@ -2571,7 +2615,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 			}
 
 			//lh_square_arg.f_U.at(xi_U_Clh.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_arg.q_T.at(xi_U_Clh.at(i)),1.0);
-			lh_square_arg.f_U.at(xi_U_Clh.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_arg.q_T.at(xi_U_Clh.at(i)));
+			lh_square_arg.f_U.at(xi_U_Clh.at(i)) = surv_exp_limit(1.0, lh_square_arg.q_T.at(xi_U_Clh.at(i)));
 
 		}
 	}
@@ -2714,7 +2758,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 			}
 
 			//lh_square_arg.h_E.at(xi_E_minus_Clh.at(i)) = gsl_ran_exponential_pdf(lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)),1.0);
-			lh_square_arg.h_E.at(xi_E_minus_Clh.at(i)) = pdf(exp_mdist(1.0), lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)));
+			lh_square_arg.h_E.at(xi_E_minus_Clh.at(i)) = pdf_exp_limit(1.0, lh_square_arg.q_E.at(xi_E_minus_Clh.at(i)));
 
 			lh_square_arg.f_E.at(xi_E_minus_Clh.at(i)) = lh_square_arg.g_E.at(xi_E_minus_Clh.at(i))*lh_square_arg.h_E.at(xi_E_minus_Clh.at(i));
 
@@ -2739,7 +2783,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 	if (xi_EnI_Clh.size() >= 1) {  // loop over all that were exposed but not yet infectious by t_max
 		for (int i = 0; i <= (int)(xi_EnI_Clh.size() - 1); i++) {
 			//lh_square_arg.f_EnI.at(xi_EnI_Clh.at(i)) = 1.0 -  gsl_cdf_gamma_P(t_max_Clh - t_e_Clh.at(xi_EnI_Clh.at(i)), a_Clh, b_Clh);
-			lh_square_arg.f_EnI.at(xi_EnI_Clh.at(i)) = 1.0 - func_latent_cdf(t_max_Clh - t_e_Clh.at(xi_EnI_Clh.at(i)), lat_mu_Clh, lat_var_Clh);
+			lh_square_arg.f_EnI.at(xi_EnI_Clh.at(i)) = func_latent_surv(t_max_Clh - t_e_Clh.at(xi_EnI_Clh.at(i)), lat_mu_Clh, lat_var_Clh);
 		}
 	}
 	//-------//
@@ -2764,8 +2808,7 @@ void FUNC::initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double>
 			//lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 -  gsl_cdf_exponential_P(t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)), c_Clh);
 			// lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 -  gsl_cdf_weibull_P(t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)), c_Clh, d_Clh);
 			//lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - cdf(exp_mdist(1/c_Clh), t_max_Clh - t_i_Clh.at(xi_InR_Clh.at(i)));
-			lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = 1.0 - cdf_weibull_limit(d_Clh, c_Clh, t_max_Clh - t_i_Clh.at(xi_R_Clh.at(i)));
-
+			lh_square_arg.f_InR.at(xi_InR_Clh.at(i)) = surv_weibull_limit(d_Clh, c_Clh, t_max_Clh - t_i_Clh.at(xi_R_Clh.at(i)));
 		}
 	}
 
@@ -3221,8 +3264,8 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(alpha_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.alpha, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), alpha_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.alpha));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, alpha_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.alpha));
 
 
 	if (xi_U_arg.empty() == 0) {
@@ -3236,7 +3279,7 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)),1.0);
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3275,7 +3318,7 @@ void mcmc_UPDATE::alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_
 
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)),1.0);
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -3354,7 +3397,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)),1.0);
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3393,7 +3436,7 @@ void mcmc_UPDATE::beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_c
 			}
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)),1.0);
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -3470,8 +3513,8 @@ void mcmc_UPDATE::beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(beta_m_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.beta_m, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), beta_m_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.beta_m));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, beta_m_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.beta_m));
 
 
 
@@ -3482,7 +3525,7 @@ void mcmc_UPDATE::beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 			lh_square_modified.q_T.at(xi_U_arg.at(i)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_current_arg.kt_sum_U.at(xi_U_arg.at(i)) + beta_m_proposed * lh_square_current_arg.movest_sum_U.at(xi_U_arg.at(i));
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)), 1.0);
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3517,7 +3560,7 @@ void mcmc_UPDATE::beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 			lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(xi_E_minus_arg.at(i)) + para_current_arg.beta*lh_square_current_arg.kt_sum_E.at(xi_E_minus_arg.at(i)) + beta_m_proposed * lh_square_current_arg.movest_sum_E.at(xi_E_minus_arg.at(i));
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)), 1.0);
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -3592,8 +3635,8 @@ void mcmc_UPDATE::lat_mu_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(lat_mu_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.lat_mu, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), lat_mu_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.lat_mu));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, lat_mu_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.lat_mu));
 
 	// double mu_up = 10.0;
 	//
@@ -3636,7 +3679,7 @@ void mcmc_UPDATE::lat_mu_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_EnI.at(xi_EnI_arg.at(i))); //subtract part of likelihood that would be updated below
 
-			lh_square_modified.f_EnI.at(xi_EnI_arg.at(i)) = 1.0 - func_latent_cdf(t_max_CUPDATE - t_e_arg.at(xi_EnI_arg.at(i)), lat_mu_proposed, para_current_arg.lat_var);
+			lh_square_modified.f_EnI.at(xi_EnI_arg.at(i)) = func_latent_surv(t_max_CUPDATE - t_e_arg.at(xi_EnI_arg.at(i)), lat_mu_proposed, para_current_arg.lat_var);
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_EnI.at(xi_EnI_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3720,8 +3763,8 @@ void mcmc_UPDATE::lat_var_update(lh_SQUARE& lh_square_current_arg, double& log_l
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(lat_var_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.lat_var, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), lat_var_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.lat_var));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, lat_var_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.lat_var));
 
 
 	// double var_up = 10.0;
@@ -3765,7 +3808,7 @@ void mcmc_UPDATE::lat_var_update(lh_SQUARE& lh_square_current_arg, double& log_l
 
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_EnI.at(xi_EnI_arg.at(i))); //subtract part of likelihood that would be updated below
 
-			lh_square_modified.f_EnI.at(xi_EnI_arg.at(i)) = 1.0 - func_latent_cdf(t_max_CUPDATE - t_e_arg.at(xi_EnI_arg.at(i)), para_current_arg.lat_mu, lat_var_proposed);
+			lh_square_modified.f_EnI.at(xi_EnI_arg.at(i)) = func_latent_surv(t_max_CUPDATE - t_e_arg.at(xi_EnI_arg.at(i)), para_current_arg.lat_mu, lat_var_proposed);
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_EnI.at(xi_EnI_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3830,8 +3873,8 @@ void mcmc_UPDATE::c_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(c_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.c, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), c_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.c));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, c_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.c));
 
 
 	if (xi_R_arg.empty() == 0) {
@@ -3858,7 +3901,7 @@ void mcmc_UPDATE::c_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf(exp_mdist(1/c_proposed), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_weibull_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed, para_current_arg.d);
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (cdf(weibull_mdist(para_current_arg.d, c_proposed), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
-			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf_weibull_limit(para_current_arg.d, c_proposed, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
+			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = surv_weibull_limit(para_current_arg.d, c_proposed, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -3922,8 +3965,8 @@ void mcmc_UPDATE::d_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(d_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.d, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), d_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.d));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, d_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.d));
 
 
 	if (xi_R_arg.empty() == 0) {
@@ -3946,7 +3989,7 @@ void mcmc_UPDATE::d_update(lh_SQUARE& lh_square_current_arg, double& log_lh_curr
 
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - gsl_cdf_weibull_P(t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)), c_proposed, para_current_arg.d);
 			//lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - (cdf(weibull_mdist(d_proposed, para_current_arg.c), t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i))));
-			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = 1.0 - cdf_weibull_limit(d_proposed, para_current_arg.c, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
+			lh_square_modified.f_InR.at(xi_InR_arg.at(i)) = surv_weibull_limit(d_proposed, para_current_arg.c, t_max_CUPDATE - t_i_arg.at(xi_InR_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(xi_InR_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -4017,8 +4060,8 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(k_1_proposed, 1.0/ para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.k_1, 1.0/ para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), k_1_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.k_1));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, k_1_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.k_1));
 
 
 	//----------
@@ -4091,7 +4134,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)),1.0);
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -4183,7 +4226,7 @@ void mcmc_UPDATE::k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 			}
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)),1.0);
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -4257,8 +4300,8 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(tau_susc_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.tau_susc, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), tau_susc_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.tau_susc));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, tau_susc_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.tau_susc));
 
 	//----- recalc beta_ij matrix with proposed tau_susc -----
 	for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -4328,7 +4371,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 			}
 
 			//lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - gsl_cdf_exponential_P(lh_square_modified.q_T.at(xi_U_arg.at(i)), 1.0);
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -4403,7 +4446,7 @@ void mcmc_UPDATE::tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_
 			}
 
 			//lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = gsl_ran_exponential_pdf(lh_square_modified.q_E.at(xi_E_minus_arg.at(i)), 1.0);
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -4476,8 +4519,8 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(nu_inf_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.nu_inf, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), nu_inf_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.nu_inf));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, nu_inf_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.nu_inf));
 
 
 	//----- recalc beta_ij matrix with proposed nu_inf -----
@@ -4551,7 +4594,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -4624,7 +4667,7 @@ void mcmc_UPDATE::nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh
 			}
 
 
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -4698,8 +4741,8 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(rho_susc1_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.rho_susc1, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), rho_susc1_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.rho_susc1));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, rho_susc1_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.rho_susc1));
 
 	//----- recalc beta_ij matrix with proposed rho_susc1 -----
 	for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -4769,7 +4812,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -4841,7 +4884,7 @@ void mcmc_UPDATE::rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -4917,8 +4960,9 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(rho_susc2_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.rho_susc2, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), rho_susc2_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.rho_susc2));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, rho_susc2_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.rho_susc2));
+
 
 
 	//----- recalc beta_ij matrix with proposed rho_susc2 -----
@@ -4990,7 +5034,7 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 			}
 
 
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -5062,7 +5106,7 @@ void mcmc_UPDATE::rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -5137,8 +5181,9 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(phi_inf1_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.phi_inf1, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), phi_inf1_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.phi_inf1));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, phi_inf1_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.phi_inf1));
+
 
 	//----- recalc beta_ij matrix with proposed phi_inf1 -----
 	for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -5210,7 +5255,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -5283,7 +5328,7 @@ void mcmc_UPDATE::phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -5358,8 +5403,9 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 
 	//log_prior_y = log(gsl_ran_exponential_pdf(phi_inf2_proposed, 1.0 / para_priors_arg.rate_exp_prior));
 	//log_prior_x = log(gsl_ran_exponential_pdf(para_current_arg.phi_inf2, 1.0 / para_priors_arg.rate_exp_prior));
-	log_prior_y = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), phi_inf2_proposed));
-	log_prior_x = log(pdf(exp_mdist(para_priors_arg.rate_exp_prior), para_current_arg.phi_inf2));
+	log_prior_y = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, phi_inf2_proposed));
+	log_prior_x = log(pdf_exp_limit(para_priors_arg.rate_exp_prior, para_current_arg.phi_inf2));
+
 
 	//----- recalc beta_ij matrix with proposed phi_inf2 -----
 	for (int i = 0; i <= (n_CUPDATE - 1); i++) {
@@ -5432,7 +5478,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 				lh_square_modified.q_T.at(xi_U_arg.at(i)) = lh_square_modified.q_T.at(xi_U_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(i));
 			}
 
-			lh_square_modified.f_U.at(xi_U_arg.at(i)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(i)));
+			lh_square_modified.f_U.at(xi_U_arg.at(i)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(i)));
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(i))); //add back part of likelihood that updated above
 		}
@@ -5505,7 +5551,7 @@ void mcmc_UPDATE::phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_
 				lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.q_E.at(xi_E_minus_arg.at(i)) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(xi_E_minus_arg.at(i));
 			}
 
-			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
+			lh_square_modified.h_E.at(xi_E_minus_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(i)));
 
 			lh_square_modified.f_E.at(xi_E_minus_arg.at(i)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(i))*lh_square_modified.h_E.at(xi_E_minus_arg.at(i));
 
@@ -6126,7 +6172,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 		lh_square_modified.q_T.at(xi_U_arg.at(j)) = para_current_arg.alpha*t_max_CUPDATE + para_current_arg.beta*lh_square_modified.kt_sum_U.at(xi_U_arg.at(j)) + para_current_arg.beta_m*lh_square_modified.movest_sum_U.at(xi_U_arg.at(j));
 
-		lh_square_modified.f_U.at(xi_U_arg.at(j)) = 1.0 - cdf(exp_mdist(1.0), lh_square_modified.q_T.at(xi_U_arg.at(j)));
+		lh_square_modified.f_U.at(xi_U_arg.at(j)) = surv_exp_limit(1.0, lh_square_modified.q_T.at(xi_U_arg.at(j)));
 
 		log_lh_modified = log_lh_modified + log(lh_square_modified.f_U.at(xi_U_arg.at(j))); // add back the updated part of likelihood
 
@@ -6230,7 +6276,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 				lh_square_modified.g_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(j)); // unchanged as source does not change
 
-				lh_square_modified.h_E.at(xi_E_minus_arg.at(j)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(j)));
+				lh_square_modified.h_E.at(xi_E_minus_arg.at(j)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(j)));
 
 				lh_square_modified.f_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(j))*lh_square_modified.h_E.at(xi_E_minus_arg.at(j));
 
@@ -6280,7 +6326,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 
 				lh_square_modified.g_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(j));
 
-				lh_square_modified.h_E.at(xi_E_minus_arg.at(j)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(xi_E_minus_arg.at(j)));
+				lh_square_modified.h_E.at(xi_E_minus_arg.at(j)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(xi_E_minus_arg.at(j)));
 
 				lh_square_modified.f_E.at(xi_E_minus_arg.at(j)) = lh_square_modified.g_E.at(xi_E_minus_arg.at(j))*lh_square_modified.h_E.at(xi_E_minus_arg.at(j));
 
@@ -6322,7 +6368,7 @@ void mcmc_UPDATE::t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_cu
 	case 1: {
 		log_lh_modified = log_lh_modified - log(lh_square_modified.f_InR.at(subject_proposed)); //subtract part of likelihood that would be updated below
 		//lh_square_modified.f_InR.at(subject_proposed) = 1.0 -  gsl_cdf_weibull_P(t_max_CUPDATE - t_proposed, para_current_arg.c, para_current_arg.d);
-		lh_square_modified.f_InR.at(subject_proposed) = 1.0 - cdf_weibull_limit(para_current_arg.d, para_current_arg.c, t_max_CUPDATE - t_proposed);
+		lh_square_modified.f_InR.at(subject_proposed) = surv_weibull_limit(para_current_arg.d, para_current_arg.c, t_max_CUPDATE - t_proposed);
 		log_lh_modified = log_lh_modified + log(lh_square_modified.f_InR.at(subject_proposed));
 
 		break;
@@ -7643,7 +7689,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 				lh_square_modified.g_E.at(index_arg.at(i)) = para_current_arg.alpha; // this is not the subject_proposed
 				lh_square_modified.q_E.at(index_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(index_arg.at(i));
-				lh_square_modified.h_E.at(index_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(index_arg.at(i)));
+				lh_square_modified.h_E.at(index_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(index_arg.at(i)));
 				lh_square_modified.f_E.at(index_arg.at(i)) = lh_square_modified.g_E.at(index_arg.at(i))*lh_square_modified.h_E.at(index_arg.at(i));
 
 				log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(index_arg.at(i)));
@@ -7685,7 +7731,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 				lh_square_modified.q_E.at(subject_proposed) = para_current_arg.alpha*t_proposed + para_current_arg.beta*lh_square_modified.kt_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(subject_proposed);
 				// 		lh_square_modified.g_E.at(subject_proposed) = para_current_arg.alpha + para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed);
-				lh_square_modified.h_E.at(subject_proposed) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(subject_proposed));
+				lh_square_modified.h_E.at(subject_proposed) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(subject_proposed));
 				lh_square_modified.f_E.at(subject_proposed) = lh_square_modified.g_E.at(subject_proposed)*lh_square_modified.h_E.at(subject_proposed);
 
 				log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(subject_proposed)); //add back the  part of likelihood
@@ -7764,7 +7810,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 
 			lh_square_modified.q_E.at(subject_proposed) = para_current_arg.alpha*t_proposed + para_current_arg.beta*lh_square_modified.kt_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(subject_proposed);
 			//lh_square_modified.g_E.at(subject_proposed) = para_current_arg.alpha + para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed);
-			lh_square_modified.h_E.at(subject_proposed) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(subject_proposed));
+			lh_square_modified.h_E.at(subject_proposed) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(subject_proposed));
 			lh_square_modified.f_E.at(subject_proposed) = lh_square_modified.g_E.at(subject_proposed)*lh_square_modified.h_E.at(subject_proposed);
 
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(subject_proposed)); //add back the  part of likelihood
@@ -7806,7 +7852,7 @@ void mcmc_UPDATE::t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_curre
 	case 1: {
 
 		log_lh_modified = log_lh_modified - log(lh_square_modified.f_EnI.at(subject_proposed)); //subtract part of likelihood that would be updated below
-		lh_square_modified.f_EnI.at(subject_proposed) = 1.0 - func_latent_cdf(t_max_CUPDATE - t_proposed, para_current_arg.lat_mu, para_current_arg.lat_var);
+		lh_square_modified.f_EnI.at(subject_proposed) = func_latent_surv(t_max_CUPDATE - t_proposed, para_current_arg.lat_mu, para_current_arg.lat_var);
 		log_lh_modified = log_lh_modified + log(lh_square_modified.f_EnI.at(subject_proposed));
 
 
@@ -8965,7 +9011,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 					lh_square_modified.g_E.at(index_arg.at(i)) = para_current_arg.alpha; // this is not the subject_proposed
 					lh_square_modified.q_E.at(index_arg.at(i)) = para_current_arg.alpha*t_e_arg.at(index_arg.at(i));
-					lh_square_modified.h_E.at(index_arg.at(i)) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(index_arg.at(i)));
+					lh_square_modified.h_E.at(index_arg.at(i)) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(index_arg.at(i)));
 					lh_square_modified.f_E.at(index_arg.at(i)) = lh_square_modified.g_E.at(index_arg.at(i))*lh_square_modified.h_E.at(index_arg.at(i));
 
 					log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(index_arg.at(i)));
@@ -8999,7 +9045,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 					lh_square_modified.q_E.at(subject_proposed) = para_current_arg.alpha*t_proposed + para_current_arg.beta*lh_square_modified.kt_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(subject_proposed);
 					// 		lh_square_modified.g_E.at(subject_proposed) = para_current_arg.alpha + para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed);
-					lh_square_modified.h_E.at(subject_proposed) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(subject_proposed));
+					lh_square_modified.h_E.at(subject_proposed) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(subject_proposed));
 					lh_square_modified.f_E.at(subject_proposed) = lh_square_modified.g_E.at(subject_proposed)*lh_square_modified.h_E.at(subject_proposed);
 
 					log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(subject_proposed)); //add back the  part of likelihood
@@ -9066,7 +9112,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 
 				lh_square_modified.q_E.at(subject_proposed) = para_current_arg.alpha*t_proposed + para_current_arg.beta*lh_square_modified.kt_sum_E.at(subject_proposed) + para_current_arg.beta_m*lh_square_modified.movest_sum_E.at(subject_proposed);
 				//lh_square_modified.g_E.at(subject_proposed) = para_current_arg.alpha + para_current_arg.beta*lh_square_modified.k_sum_E.at(subject_proposed);
-				lh_square_modified.h_E.at(subject_proposed) = pdf(exp_mdist(1.0), lh_square_modified.q_E.at(subject_proposed));
+				lh_square_modified.h_E.at(subject_proposed) = pdf_exp_limit(1.0, lh_square_modified.q_E.at(subject_proposed));
 				lh_square_modified.f_E.at(subject_proposed) = lh_square_modified.g_E.at(subject_proposed)*lh_square_modified.h_E.at(subject_proposed);
 
 				log_lh_modified = log_lh_modified + log(lh_square_modified.f_E.at(subject_proposed)); //add back the  part of likelihood
@@ -9107,7 +9153,7 @@ void mcmc_UPDATE::source_t_e_update(lh_SQUARE& lh_square_current_arg, double& lo
 		case 1: {
 
 			log_lh_modified = log_lh_modified - log(lh_square_modified.f_EnI.at(subject_proposed)); //subtract part of likelihood that would be updated below
-			lh_square_modified.f_EnI.at(subject_proposed) = 1.0 - func_latent_cdf(t_max_CUPDATE - t_proposed, para_current_arg.lat_mu, para_current_arg.lat_var);
+			lh_square_modified.f_EnI.at(subject_proposed) = func_latent_surv(t_max_CUPDATE - t_proposed, para_current_arg.lat_mu, para_current_arg.lat_var);
 			log_lh_modified = log_lh_modified + log(lh_square_modified.f_EnI.at(subject_proposed));
 
 			break;
@@ -13348,7 +13394,7 @@ Rcpp::List infer_cpp() {
 	*/
 
 	/*--------------------*/
-	ofstream myfile1_out, myfile2_out, myfile3_out, myfile4_out, myfile5_out, myfile6_out, myfile7_out;
+	ofstream myfile1_out, myfile2_out, myfile3_out, myfile4_out, myfile5_out, myfile6_out, myfile7_out, myfile8_out;
 
 	mcmc_UPDATE mcmc_update;
 	mcmc_update.set_para(para_other, coordinate, epi_final);
@@ -13358,7 +13404,8 @@ Rcpp::List infer_cpp() {
 		myfile1_out.close();
 		myfile1_out.open((string(PATH2) + string(getenv("SLURM_ARRAY_TASK_ID")) + string("_") + string("parameters_current.log")).c_str(), ios::app);
 	}
-	myfile1_out << "sample" << "\t" << "log_likelihood" << "\t" << "corr" << "\t" << "alpha" << "\t" << "beta" << "\t" << "lat_mu" << "\t" << "lat_sd" << "\t" << "c" << "\t" << "d" << "\t" << "k_1" << "\t" << "mu_1" << "\t" << "mu_2" << "\t" << "p_ber" << "\t" << "phi_inf1" << "\t" << "phi_inf2" << "\t" << "rho_susc1" << "\t" << "rho_susc2" << "\t" << "nu_inf" << "\t" << "tau_susc" << "\t" << "beta_m" << endl;
+
+	myfile1_out << "sample" << "\t" << "log_likelihood" << "\t" << "corr" << "\t" << "coverage" << "\t" << "alpha" << "\t" << "beta" << "\t" << "lat_mu" << "\t" << "lat_sd" << "\t" << "c" << "\t" << "d" << "\t" << "k_1" << "\t" << "mu_1" << "\t" << "mu_2" << "\t" << "p_ber" << "\t" << "phi_inf1" << "\t" << "phi_inf2" << "\t" << "rho_susc1" << "\t" << "rho_susc2" << "\t" << "nu_inf" << "\t" << "tau_susc" << "\t" << "beta_m" << endl;
 	//myfile1_out.close();
 
 	if (debug == 1) {
@@ -13413,6 +13460,11 @@ Rcpp::List infer_cpp() {
 		myfile7_out.open((string(PATH2) + string(getenv("SLURM_ARRAY_TASK_ID")) + string("_") + string("seqs_t_current.csv")).c_str(), ios::app);
 	}
 
+	myfile8_out.open((string(PATH2) + string("sample_percentage.csv")).c_str(), ios::app);
+	if (para_other.np > 1) {	// on cluster
+		myfile8_out.close();
+		myfile8_out.open((string(PATH2) + string(getenv("SLURM_ARRAY_TASK_ID")) + string("_") + string("sample_percentage.csv")).c_str(), ios::app);
+	}
 
 
 	vector<int> list_update; // would contain the subjects (descended from subject_proposed below) whose FIRST sequence would be updated, with a sequential order (i.e., level-wise and time-wise) of updating (note: as each event needed to be updated corresponds to an infection event, it would be sufficient to update the first sequence of necessary subjects so as to update all downstream seq)
@@ -13423,8 +13475,7 @@ Rcpp::List infer_cpp() {
 	int n_freq = para_other.n_frequ; // frequency to translate an infection time
 
 
-	double corr, coverage;
-
+	double corr, coverage, sample_percentage;
 
 	// the MCMC iterations (+10 for Tracer log output):
 	for (int i = 0; i < (n_iter + 10); i++) {
@@ -13607,11 +13658,18 @@ Rcpp::List infer_cpp() {
 		div_iter_cout = div(i + 1, para_other.n_cout);//sf: output every n_cout, starting at n_cout
 
 		// calculate how many are correctly identified at this stage
-		corr = 0;
+		int n_infected = xi_E.size(); // Total number of infected farms
+		corr = 0;// calculate how many are correctly identified at this stage
+		sample_percentage = 0;
 		for (int cs = 0; cs <= (para_other.n - 1); cs++) {
 			if (infected_source_current.at(cs) == atab_from.at(cs)) corr++;
+			if (nt_data.t_sample.at(cs) != para_other.unassigned_time) sample_percentage++;
 		}
-		coverage = corr / para_other.n;
+		coverage = corr / n_infected;
+		sample_percentage = sample_percentage / n_infected;
+
+		if ((i + 1) < 2) { myfile8_out << sample_percentage << endl; }
+
 
 		if (div_iter_cout.rem == 0) { // for console output (only at every n_cout iterations)
 			if ((i + 1) >= 10) {
@@ -13622,7 +13680,7 @@ Rcpp::List infer_cpp() {
 
 		//--parameters_current output -----------------------------//
 		//remove first 10 rows so can load directly in Tracer
-		if ((i + 1) > 10) { myfile1_out << i + 1 << "\t" << log_lh_current << "\t" << corr << "\t" << para_current.alpha << "\t" << para_current.beta << "\t" << para_current.lat_mu << "\t" << sqrt(para_current.lat_var) << "\t" << para_current.c << "\t" << para_current.d << "\t" << para_current.k_1 << "\t" << para_current.mu_1 << "\t" << para_current.mu_2 << "\t" << para_current.p_ber << "\t" << para_current.phi_inf1 << "\t" << para_current.phi_inf2 << "\t" << para_current.rho_susc1 << "\t" << para_current.rho_susc2 << "\t" << para_current.nu_inf << "\t" << para_current.tau_susc << "\t" << para_current.beta_m << endl; }
+		if ((i + 1) > 10) { myfile1_out << i + 1 << "\t" << log_lh_current << "\t" << corr << "\t" << coverage << "\t" << para_current.alpha << "\t" << para_current.beta << "\t" << para_current.lat_mu << "\t" << sqrt(para_current.lat_var) << "\t" << para_current.c << "\t" << para_current.d << "\t" << para_current.k_1 << "\t" << para_current.mu_1 << "\t" << para_current.mu_2 << "\t" << para_current.p_ber << "\t" << para_current.phi_inf1 << "\t" << para_current.phi_inf2 << "\t" << para_current.rho_susc1 << "\t" << para_current.rho_susc2 << "\t" << para_current.nu_inf << "\t" << para_current.tau_susc << "\t" << para_current.beta_m << endl; }
 
 		if (debug == 1) {
 			myfile2_out << log_lh_current << endl;
@@ -13688,6 +13746,7 @@ Rcpp::List infer_cpp() {
 	myfile5_out.close();  //consensus sequence every n_output_gm cycles
 	myfile6_out.close();  //inferred sequences every n_output_gm cycles
 	myfile7_out.close();  //inferred sequence_timings every n_output_gm cycles
+	myfile8_out.close(); // percentage of known infected hosts that are sampled
 
 
   
