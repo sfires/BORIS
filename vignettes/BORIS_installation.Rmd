@@ -72,7 +72,9 @@ To compile and run `BORIS` from source on a Mac computer, try installing the lat
 ## Instructions for Installing `BORIS` from GitHub
 
 Once all of the above has been setup, `BORIS` can be installed from the GitHub repository `https://github.com/sfires/BORIS` with the following `R` code:
+
 `library(devtools)`
+
 `install_github("sfires/BORIS", build_opts = c("--resave-data", "--no-manual"), build_vignettes = TRUE)`
 
 
