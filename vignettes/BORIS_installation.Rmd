@@ -3,12 +3,12 @@ title: "Installing BORIS"
 author: "Simon M. Firestone & Haydar Demirhan"
 date: '`r format(Sys.Date(), "%d/%m/%Y")`'
 output:
-  # rmarkdown::html_vignette:
-  #   toc: false
-  #   toc_depth: 4
-  rmarkdown::pdf_document:
-     toc: false
-     toc_depth: 4
+  rmarkdown::html_vignette:
+    toc: false
+    toc_depth: 4
+  # rmarkdown::pdf_document:
+  #    toc: false
+  #    toc_depth: 4
 urlcolor: blue
 #rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\installation.Rmd", output_format = "all")
 vignette: >
@@ -47,7 +47,7 @@ The important steps and tricks of installation are overviewed below. Users that 
 
 Install the latest frozen version of Rtools from [here](https://cran.r-project.org/bin/windows/Rtools/).
 
-The main point to be careful on is that **the installation path should not contain any spaces**. By default, it can be installed in `C:\textbackslash Rtools` on your computer.
+The main point to be careful on is that **the installation path should not contain any spaces**. By default, it can be installed in `C:\Rtools` on your computer.
 
 On the `Select components` page of installation, make sure that the `R toolchain` and `tools for running CMD` boxes *are checked*.
 

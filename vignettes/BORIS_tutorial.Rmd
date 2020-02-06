@@ -3,12 +3,12 @@ title: "Simulation and Inference with BORIS"
 author: "Simon Firestone"
 date: '`r format(Sys.Date(), "%d/%m/%Y")`'
 output:
-#  rmarkdown::html_vignette:
-  #  toc: true
-  #  toc_depth: 4
-   rmarkdown::pdf_document:
-     toc: true
-     toc_depth: 4
+ rmarkdown::html_vignette:
+ toc: true
+ toc_depth: 4
+   # rmarkdown::pdf_document:
+   #   toc: true
+   #   toc_depth: 4
 urlcolor: blue
 #rmarkdown::render("C:\\Data\\Temp\\BORIS\\vignettes\\sim and infer.Rmd", output_format = "all")
 vignette: >
@@ -625,26 +625,26 @@ end=1e04
 x<-seq(burnin+1,end,thin)
 
 
-par(mfrow=c(2,2))
-plot(x, paras1$alpha[x], type='l', col='#ff000060', 
-     ylim=c(0,0.01), 
-     xlab='iteration', ylab=expression(alpha), cex.lab=1.4)
-lines(x, paras2$alpha[x], col='#0000ff60')
-
-plot(x, paras1$beta[x], type='l', col='#ff000060',
-     xlab='iteration', ylab=expression(beta),
-     cex.lab=1.4)
-lines(x, paras2$beta[x], col='#0000ff60')
-
-plot(x, paras1$mu_1[x], type='l', col='#ff000060',
-     xlab='iteration', ylab=expression(mu[1]),
-     cex.lab=1.4)
-lines(x, paras2$mu_1[x], col='#0000ff60')
-
-plot(x, paras1$p_ber[x], type='l', col='#ff000060',
-     xlab='iteration', ylab=expression(p[ber]),
-     cex.lab=1.4)
-lines(x, paras2$p_ber[x], col='#0000ff60')
+# par(mfrow=c(2,2))
+# plot(x, paras1$alpha[x], type='l', col='#ff000060', 
+#      ylim=c(0,0.01), 
+#      xlab='iteration', ylab=expression(alpha), cex.lab=1.4)
+# lines(x, paras2$alpha[x], col='#0000ff60')
+# 
+# plot(x, paras1$beta[x], type='l', col='#ff000060',
+#      xlab='iteration', ylab=expression(beta),
+#      cex.lab=1.4)
+# lines(x, paras2$beta[x], col='#0000ff60')
+# 
+# plot(x, paras1$mu_1[x], type='l', col='#ff000060',
+#      xlab='iteration', ylab=expression(mu[1]),
+#      cex.lab=1.4)
+# lines(x, paras2$mu_1[x], col='#0000ff60')
+# 
+# plot(x, paras1$p_ber[x], type='l', col='#ff000060',
+#      xlab='iteration', ylab=expression(p[ber]),
+#      cex.lab=1.4)
+# lines(x, paras2$p_ber[x], col='#0000ff60')
 
 ```
 
