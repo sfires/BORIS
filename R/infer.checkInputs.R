@@ -51,7 +51,7 @@ infer.checkInputs <- function(parsAux , keyInits , priors , scalingFactors, seed
   if (priors[1, "n_base_part"] < 1 ){ stop("The partial sequence length, n_base_part, cannot be less than 1!")}
   if ((priors[1, "alpha_hi"] <= 0 ) | (priors[1, "alpha_hi"] > 10 )){ stop("The upper bound for the parameter alpha_hi must be in between (0, 10]!")}
   if ((priors[1, "beta_hi"] <= 0 ) | (priors[1, "beta_hi"] > 100 )){ stop("The upper bound for the parameter beta_hi must be in between (0, 100]!")}
-  if ((priors[1, "mu_lat_hi"] <= 0 ) | (priors[1, "mu_lat_hi"] > 100 )){ stop("The upper bound for the parameter mu_lat_hi must be in between (0, 100]!")}
+  if ((priors[1, "mu_lat_hi"] <= 0 ) | (priors[1, "mu_lat_hi"] > 1000 )){ stop("The upper bound for the parameter mu_lat_hi must be in between (0, 1000]!")}
   if ((priors[1, "var_lat_lo"] <= 0 ) | (priors[1, "var_lat_lo"] > 10 )){ stop("The lower bound for parameter var_lat_lo must be in between (0, 10]!")}
   if ((priors[1, "var_lat_hi"] <= 0 ) | (priors[1, "var_lat_hi"] > 10000 )){ stop("The upper bound for the parameter var_lat_hi must be in between (0, 10000]!")}
   if ((priors[1, "c_hi"] <= 0 ) | (priors[1, "c_hi"] > 3650 )){ stop("The upper bound for the parameter c_hi must be in between (0, 3650]!")}
