@@ -61,6 +61,10 @@ infer.default <- function(covariates = NULL,
     stop("Please supply the file name/path for DNA data by the argument 'dnaPath'")
   }
   
+  if (is.null(dnaReference)){
+    stop("Please indicate whether a reference genome is included with the argument 'dnaReference'")
+  }
+  
 
   parsAux[1, "n_iterations"] = round(parsAux[1, "n_iterations"])
   
@@ -229,7 +233,7 @@ infer.default <- function(covariates = NULL,
   seq_out[seq_out == 'c'] <- 4
   seq_out[seq_out == 'n'] <- NA
   
-  if(is.null(dnaReference)){
+  if(dnaReference==F){
     
     write.table(seq_out, paste0(inputPath, "/seq.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
     
