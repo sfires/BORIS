@@ -12,4 +12,5 @@ infer <- function(covariates = NULL,
                   inputPath = NULL,
                   outputPath = NULL,
                   dnaPath = NULL,
+                  dnaReference = NULL,
                   debug = NULL) UseMethod("infer")

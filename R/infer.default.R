@@ -14,6 +14,7 @@ infer.default <- function(covariates = NULL,
                           inputPath = NULL,
                           outputPath = NULL,
                           dnaPath = NULL,
+                          dnaReference = NULL,
                           debug = NULL){
   
 
@@ -59,6 +60,7 @@ infer.default <- function(covariates = NULL,
   if (is.null(dnaPath)){
     stop("Please supply the file name/path for DNA data by the argument 'dnaPath'")
   }
+  
 
   parsAux[1, "n_iterations"] = round(parsAux[1, "n_iterations"])
   
@@ -212,7 +214,7 @@ infer.default <- function(covariates = NULL,
   t_sample<-matrix(t.sample, nrow=parsAux$n)
   write.table(t_sample, paste0(inputPath, "/t_sample.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
   
-  ##seq_fmd.txt
+  ##seq.csv
   #turn sequence data into rows before further manipulation
   seq_out<-matrix(nrow=parsAux$n, ncol=seq.l)
   for(i in 1:parsAux$n){  seq_out[i,] <- seqs.sims.phylo[i,] }
@@ -226,15 +228,35 @@ infer.default <- function(covariates = NULL,
   seq_out[seq_out == 't'] <- 3
   seq_out[seq_out == 'c'] <- 4
   seq_out[seq_out == 'n'] <- NA
-  write.table(seq_out, paste0(inputPath, "/seq.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
   
-  
-  ##con_seq_estm.txt
-  #estimate as most frequent base at each site
-  most_freq <- function(x){as.numeric(names(sort(table(x),decreasing=TRUE)[1]))}
-  con_seq_estm <- apply(seq_out,MARGIN=2,most_freq)
-  
-  write.table(paste0(as.character(con_seq_estm), collapse=","), paste0(inputPath, "/con_seq_estm.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
+  if(is.null(dnaReference)){
+    
+    write.table(seq_out, paste0(inputPath, "/seq.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
+    
+    
+    ##con_seq_estm.txt
+    #estimate as most frequent base at each site
+    most_freq <- function(x){as.numeric(names(sort(table(x),decreasing=TRUE)[1]))}
+    con_seq_estm <- apply(seq_out,MARGIN=2,most_freq)
+    
+    write.table(paste0(as.character(con_seq_estm), collapse=","), paste0(inputPath, "/con_seq_estm.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
+    
+  }
+    
+  if(dnaReference==T){
+    
+    ref.id<-dim(seq_out)[1]
+    seq_ref<-seq_out[ref.id,]
+    seq_out<-seq_out[-ref.id,]
+    
+    write.table(seq_out, paste0(inputPath, "/seq.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
+    
+    
+    ##con_seq_estm.txt
+    write.table(paste0(as.character(seq_ref), collapse=","), paste0(inputPath, "/con_seq_estm.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = F)
+    
+  }
+
   
   write.table(keyInits, paste0(inputPath, "/parameters_key_inits.csv"), quote = F, sep = ",",eol = "\n", na = "NA", dec = ".", row.names = F, col.names = names(keyInits))
   

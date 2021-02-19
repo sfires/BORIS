@@ -19,6 +19,7 @@
         inputPath = NULL,
         outputPath = NULL,
         dnaPath = NULL,
+        dnaReference = NULL,
         debug = NULL)
 }
 
@@ -35,6 +36,7 @@
   \item{inputPath}{The path to the folder where the input files will be created.}
   \item{outputPath}{The path to the folder where the output files will be created.}
   \item{dnaPath}{The path to sequence data. This full path must point to a directory containing a single \code{.fasta} file.}
+  \item{dnaReference}{If \eqn{=} TRUE then a reference sequence is included as the last row in the single \code{.fasta} file in \code{dnaPath} and this is used as the grand master sequence, Gm. Otherwise, it is assumed that no reference is included and the grand master sequence is collated as the most common base at each site in the available sequences.}
   \item{debug}{A logical that produces verbose outputs for debugging only if \eqn{=}1.}
 
 }
