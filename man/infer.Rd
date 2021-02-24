@@ -136,6 +136,7 @@ Maintainer: Simon Firestone <simon.firestone@unimelb.edu.au>
                           'var_lat_hi' = 50,
                           'c_hi' = 100,
                           'd_hi' = 100,
+                          'k_1_lo' = 0,
                           'k_1_hi' = 100,
                           'mu_1_hi' = 0.1,
                           'mu_2_hi' = 0.1,

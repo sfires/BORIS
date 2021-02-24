@@ -29,6 +29,7 @@ This data set is an example of the prior parameterisation used in the Bayesian S
     \item{var_lat_hi}{Lower/upper bound for prior of inferred parameter.}
     \item{c_hi}{Lower/upper bound for prior of inferred parameter.}
     \item{d_hi}{Lower/upper bound for prior of inferred parameter.}
+    \item{k_1_lo}{Lower/upper bound for prior of inferred parameter.}
     \item{k_1_hi}{Lower/upper bound for prior of inferred parameter.}
     \item{mu_1_hi}{Lower/upper bound for prior of inferred parameter.}
     \item{mu_2_hi}{Lower/upper bound for prior of inferred parameter.}
@@ -60,6 +61,7 @@ This data set is an example of the prior parameterisation used in the Bayesian S
                           'var_lat_hi' = 50,
                           'c_hi' = 100,
                           'd_hi' = 100,
+                          'k_1_lo' = 0,                          
                           'k_1_hi' = 100,
                           'mu_1_hi' = 0.1,
                           'mu_2_hi' = 0.1,
