@@ -55,7 +55,7 @@ infer.checkInputs <- function(parsAux , keyInits , priors , scalingFactors, seed
   if ((priors[1, "var_lat_lo"] <= 0 ) | (priors[1, "var_lat_lo"] > 10 )){ stop("The lower bound for parameter var_lat_lo must be in between (0, 10]!")}
   if ((priors[1, "var_lat_hi"] <= 0 ) | (priors[1, "var_lat_hi"] > 500^2 )){ stop("The upper bound for the parameter var_lat_hi must be in between (0, 250000]!")}
   if ((priors[1, "c_hi"] <= 0 ) | (priors[1, "c_hi"] > 3650 )){ stop("The upper bound for the parameter c_hi must be in between (0, 3650]!")}
-  if ((priors[1, "k_1_lo"] <= 0 ) | (priors[1, "k_1_lo"] > 1000 )){ stop("The lower bound for the parameter k_1_lo must be in between (0, 1000]!")}
+  if ((priors[1, "k_1_lo"] < 0 ) | (priors[1, "k_1_lo"] > 1000 )){ stop("The lower bound for the parameter k_1_lo must be in between [0, 1000]!")}
   if ((priors[1, "k_1_hi"] <= 0 ) | (priors[1, "k_1_hi"] > 1000 )){ stop("The upper bound for the parameter k_1_hi must be in between (0, 1000]!")}
   if ((priors[1, "mu_1_hi"] <= 0 ) | (priors[1, "mu_1_hi"] > 1000 )){ stop("The upper bound for the parameter mu_1_hi must be in between (0, 1000]!")}
   if ((priors[1, "mu_2_hi"] <= 0 ) | (priors[1, "mu_2_hi"] > 1000 )){ stop("The upper bound for the parameter mu_2_hi must be in between (0, 1000]!")}
