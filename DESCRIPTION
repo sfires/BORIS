@@ -1,8 +1,8 @@
 Package: BORIS
 Type: Package
 Title: Bayesian Outbreak Reconstruction Inference and Simulation
-Version: 1.1.14
-Date: 2021-02-24
+Version: 14.4.15
+Date: 2023-05-30
 Authors@R: c(
     person(given = "Simon",
            family = "Firestone",
@@ -30,7 +30,7 @@ LinkingTo: Rcpp, BH
 SystemRequirements: C++11
 NeedsCompilation: yes
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.1
 Encoding: UTF-8
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr

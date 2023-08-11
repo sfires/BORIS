@@ -10,7 +10,7 @@ infer.checkInputs <- function(parsAux , keyInits , priors , scalingFactors, seed
   if (parsAux[1, "processes"] > 1 ){ stop("Only use processes > 1 for a SLURM cluster computer implementation. For multiple chains on other systems, use process = 1 and run several instances with different first values of the argument 'seed'.")}
   
   if ((parsAux[1, "n_seq"] < 1 ) | (parsAux[1, "n_seq"] >10 )){ stop("Initial number of sequences expected for a farm, n_seq, must be in between 1 and 10. This is redefined if more memory needs to be allocated for specific farms, so best set as low as expected!")}
-  if ((parsAux[1, "n_base"] < 1 ) | (parsAux[1, "n_base"] > 10000 )){ stop("Number of bases (nucleotides) in length for a sequence, n_base,  is restricted between 1 and 10,000. For longer sequences, use only partial sequences of SNPs!")}
+  if ((parsAux[1, "n_base"] < 1 ) | (parsAux[1, "n_base"] > 50000 )){ stop("Number of bases (nucleotides) in length for a sequence, n_base,  is restricted between 1 and 50,000. For longer sequences, use only partial sequences of SNPs!")}
   if (parsAux[1, "n_iterations"] < 1 ){ stop("Number of iterations of the MCMC, n_iterations, must be a positive integer!")}
   if ((parsAux[1, "n_iterations"] >= 1) & (parsAux[1, "n_iterations"] <1e5) ){ cat("Warning: Are you sure you want such a low number MCMC iterations?\n")}
   if ((parsAux[1, "n_frequ"] < 1 ) | (parsAux[1, "n_frequ"] >  parsAux[1, "n_iterations"] )){ stop("Frequency of updating exposure times, n_frequ, must be in between 1 and n_iterations!")}

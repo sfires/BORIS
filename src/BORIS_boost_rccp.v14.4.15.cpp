@@ -39,8 +39,9 @@ using namespace Rcpp;
 
 //set upper limits for to avoid memory allocation issues
 #define NLIMIT 500
-#define SEQLLIMIT 10000
+#define SEQLLIMIT 50000
 #define NSEQLIMIT 5
+#define MOVELIMIT 10000
 
 using namespace std;
 //using namespace boost;
@@ -81,369 +82,369 @@ extern int n_base_part; // used in IO_simpara
 
 // -Structure declarations ----------------------------------------------------------------------------------------------
 struct nt_struct {
-  
-  vec2int nt; // the sequence corresponds to the  infected-or-infecting event OR sampling of a farm
-  vec2d t_nt ; // the time corresponds to the sequence above
-  vector<int> current_size; // the number of sequences recorded
-  
-  vector<double> t_sample; // sampling time
-  
-  vec2int infecting_list; // each elements contains the list of subjects being infected by the corresponding source (sorted in order of infection)
-  vector<int> infecting_size; // number of subjects infected by the corresponding source (if sampeled, it would be equal to current_size -2 as also excluding the first record corresponds to own infection)
-  
-  //constructor to assign size on heap, limited only by virtual memory not RAM
-  nt_struct() : nt(NLIMIT, vector<int>(NSEQLIMIT*SEQLLIMIT)), t_nt(NLIMIT, vector<double>(NSEQLIMIT)), current_size(NLIMIT), t_sample(NLIMIT), infecting_list(NLIMIT), infecting_size(NLIMIT) {};
+
+	vec2int nt; // the sequence corresponds to the  infected-or-infecting event OR sampling of a farm
+	vec2d t_nt; // the time corresponds to the sequence above
+	vector<int> current_size; // the number of sequences recorded
+
+	vector<double> t_sample; // sampling time
+
+	vec2int infecting_list; // each elements contains the list of subjects being infected by the corresponding source (sorted in order of infection)
+	vector<int> infecting_size; // number of subjects infected by the corresponding source (if sampeled, it would be equal to current_size -2 as also excluding the first record corresponds to own infection)
+
+	//constructor to assign size on heap, limited only by virtual memory not RAM
+	nt_struct() : nt(NLIMIT, vector<int>(NSEQLIMIT*SEQLLIMIT)), t_nt(NLIMIT, vector<double>(NSEQLIMIT)), current_size(NLIMIT), t_sample(NLIMIT), infecting_list(NLIMIT), infecting_size(NLIMIT) {};
 };
 
 //----------------
 struct para_key {
-  double alpha, beta, a, b, lat_mu, lat_var, c, d, k_1; //key model parameters (a,b are redundant)
-  double mu_1, mu_2; // mutation rates
-  double p_ber; // varation parameter p (for the master sequence)
-  double rho_susc1, rho_susc2; // farm type susceptibility indicator variable(reference i0=cattle, i1 = pigs, i2 = sheep and smallholder)
-  double phi_inf1, phi_inf2; // farm type infectivity indicator variable(reference i0=cattle, i1 = pigs, i2 = sheep and smallholder)
-  double tau_susc, nu_inf; // farm type susceptibility and infectivity based on herd size
-  double beta_m; // the effect on likelihood for each traced movement between a pair of infected premises
+	double alpha, beta, a, b, lat_mu, lat_var, c, d, k_1; //key model parameters (a,b are redundant)
+	double mu_1, mu_2; // mutation rates
+	double p_ber; // varation parameter p (for the master sequence)
+	double rho_susc1, rho_susc2; // farm type susceptibility indicator variable(reference i0=cattle, i1 = pigs, i2 = sheep and smallholder)
+	double phi_inf1, phi_inf2; // farm type infectivity indicator variable(reference i0=cattle, i1 = pigs, i2 = sheep and smallholder)
+	double tau_susc, nu_inf; // farm type susceptibility and infectivity based on herd size
+	double beta_m; // the effect on likelihood for each traced movement between a pair of infected premises
 };
 
 
 struct para_key_init {
-  double alpha, beta, a, b, lat_mu, lat_var, c, d, k_1;
-  double mu_1, mu_2;
-  double p_ber;
-  double rho_susc1, rho_susc2;
-  double phi_inf1, phi_inf2;
-  double tau_susc, nu_inf;
-  double beta_m;
+	double alpha, beta, a, b, lat_mu, lat_var, c, d, k_1;
+	double mu_1, mu_2;
+	double p_ber;
+	double rho_susc1, rho_susc2;
+	double phi_inf1, phi_inf2;
+	double tau_susc, nu_inf;
+	double beta_m;
 };
 
 struct para_priors_etc {
-  double t_range; // for update of t_i; t_i would range between [t_o - t_range, t_o + range] (see paper SI)
-  double t_back; // for update of t_e; 
-  //t_up = min(t_sample_arg.at(subject_proposed), min(t_i_arg.at(subject_proposed), t_max_CUPDATE));
-  //t_low = max(0.0, t_up - para_priors_arg.t_back);
-  double t_bound_hi; // t_bound used when proposing initial sources, t_i of infectee must be within t_bound_hi days of proposed t_i of j (essentially the upper bound of the generation interval). For FMD: mean = 6.1; sd=4.6 (Haydon, 2003).
-  double rate_exp_prior;// the rate of exp to be used as vague prior
-  int ind_n_base_part;// =1 if the seq data is partial
-  int n_base_part; // the partial length used if ind_n_base_part =1
-  
-  /* lower/upper bounds for parameters */
-  double alpha_hi, beta_hi, lat_mu_hi, lat_var_lo, lat_var_hi, c_hi, d_hi;
-  double k_1_lo, k_1_hi, mu_1_hi, mu_2_hi, p_ber_hi;
-  double rho_susc1_hi, rho_susc2_hi, phi_inf1_hi, phi_inf2_hi;
-  double tau_susc_lo, tau_susc_hi, nu_inf_lo, nu_inf_hi;
-  double beta_m_hi;
-  double trace_window; // twice the maximum incubation period
+	double t_range; // for update of t_i; t_i would range between [t_o - t_range, t_o + range] (see paper SI)
+	double t_back; // for update of t_e; 
+						//t_up = min(t_sample_arg.at(subject_proposed), min(t_i_arg.at(subject_proposed), t_max_CUPDATE));
+						//t_low = max(0.0, t_up - para_priors_arg.t_back);
+	double t_bound_hi; // t_bound used when proposing initial sources, t_i of infectee must be within t_bound_hi days of proposed t_i of j (essentially the upper bound of the generation interval). For FMD: mean = 6.1; sd=4.6 (Haydon, 2003).
+	double rate_exp_prior;// the rate of exp to be used as vague prior
+	int ind_n_base_part;// =1 if the seq data is partial
+	int n_base_part; // the partial length used if ind_n_base_part =1
+
+	/* lower/upper bounds for parameters */
+	double alpha_hi, beta_hi, lat_mu_hi, lat_var_lo, lat_var_hi, c_hi, d_hi;
+	double k_1_lo, k_1_hi, mu_1_hi, mu_2_hi, p_ber_hi;
+	double rho_susc1_hi, rho_susc2_hi, phi_inf1_hi, phi_inf2_hi;
+	double tau_susc_lo, tau_susc_hi, nu_inf_lo, nu_inf_hi;
+	double beta_m_hi;
+	double trace_window; // twice the maximum incubation period
 };
 
 struct para_scaling_factors {
-  double alpha_sf, beta_sf, a_sf, b_sf, lat_mu_sf, lat_var_sf, c_sf, d_sf, k_1_sf; //key model parameters (a,b are redundant)
-  double mu_1_sf, mu_2_sf; // mutation rates
-  double p_ber_sf; // varation parameter p (for the master sequence)
-  double rho_susc1_sf, rho_susc2_sf; //  farm type susceptibility indicator variable
-  double phi_inf1_sf, phi_inf2_sf; //  farm type infectivity indicator variable
-  double tau_susc_sf, nu_inf_sf; //  herd size
-  double beta_m_sf; //  probability of infection given contact-traced movement
+	double alpha_sf, beta_sf, a_sf, b_sf, lat_mu_sf, lat_var_sf, c_sf, d_sf, k_1_sf; //key model parameters (a,b are redundant)
+	double mu_1_sf, mu_2_sf; // mutation rates
+	double p_ber_sf; // varation parameter p (for the master sequence)
+	double rho_susc1_sf, rho_susc2_sf; //  farm type susceptibility indicator variable
+	double phi_inf1_sf, phi_inf2_sf; //  farm type infectivity indicator variable
+	double tau_susc_sf, nu_inf_sf; //  herd size
+	double beta_m_sf; //  probability of infection given contact-traced movement
 };
 
 //----------------
 
 struct para_aux { // other model quantities to be fixed/known
-  int n, n_seq, n_base; //n, population size (number of farms/sites); n_seq, max number of sequences for a farm (to reserve the capacity of the vector storing sequence data); n_base, number of bases for a sequence
-  string kernel_type; // type of spatial kernel used e.g 'exponential/'power_law'
-  string coord_type; // type of spatial coordinates ('longlat' or 'cartesian')
-  double t_max, unassigned_time; // t_max is the upper limit of observation period; unassigned_time is an abritary extreme value e.g. 9e+10 , to indicate that an event does not happen e.g. no infection
-  int np; //number of processes for >1 for cluster computing
-  double n_iterations; //number of iterations
-  int n_frequ, n_output_source, n_output_gm, n_cout; //frequency of updating infection times, outputing updated sources and console output
-  int opt_latgamma; //1 = latent period from gamma distribution (0 = Lau original, Gaussian)
-  int opt_k80; //1 = reformulated K80 to match paper (0 = Lau original, secondary reference)
-  int opt_betaij; //1 = farm-level covariates incorporated into beta (0 = Lau original)
-  int opt_ti_update; //1 = update t_i (0 = Lau original)
-  int opt_mov; //1 = contact-tracing incorporated into betaij (0 = Lau original)
-  int debug; //1 = print debug outputs and checksums to console
+	int n, n_seq, n_base; //n, population size (number of farms/sites); n_seq, max number of sequences for a farm (to reserve the capacity of the vector storing sequence data); n_base, number of bases for a sequence
+	string kernel_type; // type of spatial kernel used e.g 'exponential/'power_law'
+	string coord_type; // type of spatial coordinates ('longlat' or 'cartesian')
+	double t_max, unassigned_time; // t_max is the upper limit of observation period; unassigned_time is an abritary extreme value e.g. 9e+10 , to indicate that an event does not happen e.g. no infection
+	int np; //number of processes for >1 for cluster computing
+	double n_iterations; //number of iterations
+	int n_frequ, n_output_source, n_output_gm, n_cout; //frequency of updating infection times, outputing updated sources and console output
+	int opt_latgamma; //1 = latent period from gamma distribution (0 = Lau original, Gaussian)
+	int opt_k80; //1 = reformulated K80 to match paper (0 = Lau original, secondary reference)
+	int opt_betaij; //1 = farm-level covariates incorporated into beta (0 = Lau original)
+	int opt_ti_update; //1 = update t_i (0 = Lau original)
+	int opt_mov; //1 = contact-tracing incorporated into betaij (0 = Lau original)
+	int debug; //1 = print debug outputs and checksums to console
 };
 
 
 //-----------------
 
 struct epi_struct {
-  vector<int> k;
-  vector<double> q, t_e, t_i,t_r;
-  vector<int> status;
-  vector<double> coor_x,coor_y;
-  vector<double> ftype0; //indicator variable for predominantly cattle farms [reference]
-  vector<double> ftype1; //indicator variable for pig farms (not cattle [reference] and not sheep, etc)
-  vector<double> ftype2; //indicator variable for sheep and small-holder farms (not cattle [reference] and not pigs)
-  vector<double> herdn; //number of animals in each herd
-  vector<int> infected_source;
-  
-  //constructor to assign size on heap, limited only by virtual memory not RAM
-  epi_struct() : k(NLIMIT), q(NLIMIT), t_e(NLIMIT), t_i(NLIMIT), t_r(NLIMIT), status(NLIMIT), 
-  coor_x(NLIMIT), coor_y(NLIMIT), ftype0(NLIMIT), ftype1(NLIMIT), ftype2(NLIMIT),
-  herdn(NLIMIT), infected_source(NLIMIT) {};
-  
+	vector<int> k;
+	vector<double> q, t_e, t_i, t_r;
+	vector<int> status;
+	vector<double> coor_x, coor_y;
+	vector<double> ftype0; //indicator variable for predominantly cattle farms [reference]
+	vector<double> ftype1; //indicator variable for pig farms (not cattle [reference] and not sheep, etc)
+	vector<double> ftype2; //indicator variable for sheep and small-holder farms (not cattle [reference] and not pigs)
+	vector<double> herdn; //number of animals in each herd
+	vector<int> infected_source;
+
+	//constructor to assign size on heap, limited only by virtual memory not RAM
+	epi_struct() : k(NLIMIT), q(NLIMIT), t_e(NLIMIT), t_i(NLIMIT), t_r(NLIMIT), status(NLIMIT),
+		coor_x(NLIMIT), coor_y(NLIMIT), ftype0(NLIMIT), ftype1(NLIMIT), ftype2(NLIMIT),
+		herdn(NLIMIT), infected_source(NLIMIT) {};
+
 };
 
 struct moves_struct { // structure to hold edgelist (contact-traced movement data)
-  
-  vector<int> from_k; // source of a contact-traced movement
-  vector<int> to_k; // destination of a contact-traced movement
-  vector<int> t_m; // day of the movement, from t0 (on same time scale as t_e, etc.)
-  //constructor to assign size on heap, limited only by virtual memory not RAM
-  moves_struct() : from_k(SEQLLIMIT), to_k(SEQLLIMIT), t_m(SEQLLIMIT) {}; //limited to 10000 movements (for now)
+
+	vector<int> from_k; // source of a contact-traced movement
+	vector<int> to_k; // destination of a contact-traced movement
+	vector<int> t_m; // day of the movement, from t0 (on same time scale as t_e, etc.)
+					  //constructor to assign size on heap, limited only by virtual memory not RAM
+	moves_struct() : from_k(MOVELIMIT), to_k(MOVELIMIT), t_m(MOVELIMIT) {}; //limited to 10000 movements (for now)
 };
 
 //------------------
 
 struct lh_SQUARE { // the contribution to likelihood function from each individual is subdivided into f_U, f_E, f_I,f_R
-  vector<long double> f_U, q_T, kt_sum_U;
-  vector<long double> f_E, g_E,k_sum_E, h_E,q_E,kt_sum_E;
-  vector<long double> f_I, f_EnI;
-  vector<long double> f_R, f_InR;
-  vector<long double> log_f_S, log_f_Snull;
-  vector<double> movest_sum_U, movest_sum_E, moves_sum_E;
-  //constructor to assign size on heap, limited only by virtual memory not RAM
-  lh_SQUARE() : f_U(NLIMIT), q_T(NLIMIT), kt_sum_U(NLIMIT), f_E(NLIMIT), g_E(NLIMIT), k_sum_E(NLIMIT),
-  h_E(NLIMIT), q_E(NLIMIT), kt_sum_E(NLIMIT), f_I(NLIMIT), f_EnI(NLIMIT), f_R(NLIMIT), 
-  f_InR(NLIMIT), log_f_S(NLIMIT), log_f_Snull(NLIMIT), 
-  movest_sum_U(NLIMIT), movest_sum_E(NLIMIT), moves_sum_E(NLIMIT) {};
+	vector<long double> f_U, q_T, kt_sum_U;
+	vector<long double> f_E, g_E, k_sum_E, h_E, q_E, kt_sum_E;
+	vector<long double> f_I, f_EnI;
+	vector<long double> f_R, f_InR;
+	vector<long double> log_f_S, log_f_Snull;
+	vector<double> movest_sum_U, movest_sum_E, moves_sum_E;
+	//constructor to assign size on heap, limited only by virtual memory not RAM
+	lh_SQUARE() : f_U(NLIMIT), q_T(NLIMIT), kt_sum_U(NLIMIT), f_E(NLIMIT), g_E(NLIMIT), k_sum_E(NLIMIT),
+		h_E(NLIMIT), q_E(NLIMIT), kt_sum_E(NLIMIT), f_I(NLIMIT), f_EnI(NLIMIT), f_R(NLIMIT),
+		f_InR(NLIMIT), log_f_S(NLIMIT), log_f_Snull(NLIMIT),
+		movest_sum_U(NLIMIT), movest_sum_E(NLIMIT), moves_sum_E(NLIMIT) {};
 };
 
 
 //---Function classes -----------------------
 
 /*
- function class
- private: available within all functions of this class without including in arguments
- public: declaring the parameters
- */
+function class
+private: available within all functions of this class without including in arguments
+public: declaring the parameters
+*/
 
 class FUNC {
-  
+
 private:
-  
-  double alpha_Clh;
-  double beta_Clh;
-  double lat_mu_Clh;
-  double lat_var_Clh;
-  double c_Clh;
-  double d_Clh;
-  double k_1_Clh;
-  double mu_1_Clh;
-  double mu_2_Clh;
-  
-  double p_ber_Clh;
-  
-  double rho_susc1_Clh, rho_susc2_Clh; //unknown parameters for indicator variable effects on infectivity of farm type=1 and =2 (compared to reference =0)
-  double phi_inf1_Clh, phi_inf2_Clh; //unknown parameters for indicator variable effects on susceptibility of farm type=1 and =2 (compared to reference =0)
-  
-  double tau_susc_Clh, nu_inf_Clh; //unknown parameters for infectivity and susceptibility based on herd size
-  
-  double beta_m_Clh; //unknown parameter for contact-traced movt related infection
-  
-  int n_Clh, n_seq_Clh, n_base_Clh;
-  string kernel_type_Clh;
-  string coord_type_Clh;
-  double t_max_Clh,unassigned_time_Clh;
-  int np_Clh;
-  double n_iterations_Clh;
-  int n_frequ_Clh, n_output_source_Clh, n_output_gm_Clh, n_cout_Clh;
-  
-  vector< vector<double> > coordinate_Clh;
-  
-  vector<int> xi_U_Clh, xi_E_Clh, xi_E_minus_Clh, xi_I_Clh, xi_R_Clh, xi_EnI_Clh, xi_InR_Clh;
-  vector<double> t_e_Clh, t_i_Clh, t_r_Clh;
-  
-  vector<int> index_Clh;
-  
-  vector <int> infected_source_Clh;
-  
+
+	double alpha_Clh;
+	double beta_Clh;
+	double lat_mu_Clh;
+	double lat_var_Clh;
+	double c_Clh;
+	double d_Clh;
+	double k_1_Clh;
+	double mu_1_Clh;
+	double mu_2_Clh;
+
+	double p_ber_Clh;
+
+	double rho_susc1_Clh, rho_susc2_Clh; //unknown parameters for indicator variable effects on infectivity of farm type=1 and =2 (compared to reference =0)
+	double phi_inf1_Clh, phi_inf2_Clh; //unknown parameters for indicator variable effects on susceptibility of farm type=1 and =2 (compared to reference =0)
+
+	double tau_susc_Clh, nu_inf_Clh; //unknown parameters for infectivity and susceptibility based on herd size
+
+	double beta_m_Clh; //unknown parameter for contact-traced movt related infection
+
+	int n_Clh, n_seq_Clh, n_base_Clh;
+	string kernel_type_Clh;
+	string coord_type_Clh;
+	double t_max_Clh, unassigned_time_Clh;
+	int np_Clh;
+	double n_iterations_Clh;
+	int n_frequ_Clh, n_output_source_Clh, n_output_gm_Clh, n_cout_Clh;
+
+	vector< vector<double> > coordinate_Clh;
+
+	vector<int> xi_U_Clh, xi_E_Clh, xi_E_minus_Clh, xi_I_Clh, xi_R_Clh, xi_EnI_Clh, xi_InR_Clh;
+	vector<double> t_e_Clh, t_i_Clh, t_r_Clh;
+
+	vector<int> index_Clh;
+
+	vector <int> infected_source_Clh;
+
 public:
-  
-  void set_para (para_key para_current_arg, para_aux para_other_arg, vector< vector<double> > coordinate_arg, vector<int> xi_U_arg, vector<int> xi_E_arg, vector<int> xi_E_minus_arg ,vector<int> xi_I_arg, vector<int> xi_R_arg, vector<int> xi_EnI_arg, vector<int> xi_InR_arg, vector<double> t_e_arg, vector<double> t_i_arg, vector<double> t_r_arg, vector<int> index_arg, vector<int> infected_source_arg) {
-    
-    alpha_Clh=para_current_arg.alpha;
-    beta_Clh=para_current_arg.beta;
-    lat_mu_Clh=para_current_arg.lat_mu;
-    lat_var_Clh=para_current_arg.lat_var;
-    c_Clh=para_current_arg.c;
-    d_Clh = para_current_arg.d;
-    k_1_Clh=para_current_arg.k_1;
-    mu_1_Clh=para_current_arg.mu_1;
-    mu_2_Clh=para_current_arg.mu_2;
-    
-    p_ber_Clh = para_current_arg.p_ber;
-    
-    rho_susc1_Clh = para_current_arg.rho_susc1;
-    rho_susc2_Clh = para_current_arg.rho_susc2;
-    phi_inf1_Clh = para_current_arg.phi_inf1;
-    phi_inf2_Clh = para_current_arg.phi_inf2;
-    
-    tau_susc_Clh = para_current_arg.tau_susc;
-    nu_inf_Clh = para_current_arg.nu_inf;
-    
-    beta_m_Clh = para_current_arg.beta_m;
-    
-    n_Clh = para_other_arg.n;
-    kernel_type_Clh = para_other_arg.kernel_type;
-    coord_type_Clh = para_other_arg.coord_type;
-    t_max_Clh = para_other_arg.t_max;
-    unassigned_time_Clh = para_other_arg.unassigned_time;
-    np_Clh = para_other_arg.np;
-    
-    n_base_Clh = para_other_arg.n_base;
-    n_seq_Clh = para_other_arg.n_seq;
-    n_iterations_Clh = para_other_arg.n_iterations;
-    n_frequ_Clh = para_other_arg.n_frequ;
-    n_output_source_Clh = para_other_arg.n_output_source;
-    n_output_gm_Clh = para_other_arg.n_output_gm;
-    n_cout_Clh = para_other_arg.n_cout;
-    
-    coordinate_Clh = coordinate_arg;
-    
-    xi_U_Clh = xi_U_arg;
-    xi_E_Clh = xi_E_arg;
-    xi_E_minus_Clh = xi_E_minus_arg;
-    xi_I_Clh = xi_I_arg;
-    xi_R_Clh = xi_R_arg;
-    xi_EnI_Clh = xi_EnI_arg;
-    xi_InR_Clh = xi_InR_arg;
-    
-    
-    t_e_Clh = t_e_arg;
-    t_i_Clh = t_i_arg;
-    t_r_Clh = t_r_arg;
-    
-    index_Clh = index_arg;
-    
-    infected_source_Clh = infected_source_arg;
-    
-  }
-  
-  
-  void initialize_kernel_mat (vector< vector<double> >&, vector<double>&); // function prototype for initializing kernel distance  
-  
-  void initialize_delta_mat (vector< vector<double> >&); // function prototype for initializing length of exposure time
-  
-  void initialize_delta_mat_mov(vector< vector<double> >&, moves_struct& moves_arg); // function prototype for initializing length of exposure time for movements
-  
-  void initialize_beta_ij_mat(vector< vector<double> >& beta_ij_mat_arg, vector<double>& herdn_arg, vector<double>& ftype0_arg, vector<double>& ftype1_arg, vector<double>& ftype2_arg);
-  
-  void initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double> > kernel_mat_arg, vector< vector<double> > delta_mat_arg, vector<double>& norm_const_arg, nt_struct& nt_data_arg, vector<int>& con_seq, vector< vector<double> > beta_ij_mat_arg, moves_struct& moves_arg, para_priors_etc& para_priors_arg, vector< vector<double> > delta_mat_mov_arg);
-  
+
+	void set_para(para_key para_current_arg, para_aux para_other_arg, vector< vector<double> > coordinate_arg, vector<int> xi_U_arg, vector<int> xi_E_arg, vector<int> xi_E_minus_arg, vector<int> xi_I_arg, vector<int> xi_R_arg, vector<int> xi_EnI_arg, vector<int> xi_InR_arg, vector<double> t_e_arg, vector<double> t_i_arg, vector<double> t_r_arg, vector<int> index_arg, vector<int> infected_source_arg) {
+
+		alpha_Clh = para_current_arg.alpha;
+		beta_Clh = para_current_arg.beta;
+		lat_mu_Clh = para_current_arg.lat_mu;
+		lat_var_Clh = para_current_arg.lat_var;
+		c_Clh = para_current_arg.c;
+		d_Clh = para_current_arg.d;
+		k_1_Clh = para_current_arg.k_1;
+		mu_1_Clh = para_current_arg.mu_1;
+		mu_2_Clh = para_current_arg.mu_2;
+
+		p_ber_Clh = para_current_arg.p_ber;
+
+		rho_susc1_Clh = para_current_arg.rho_susc1;
+		rho_susc2_Clh = para_current_arg.rho_susc2;
+		phi_inf1_Clh = para_current_arg.phi_inf1;
+		phi_inf2_Clh = para_current_arg.phi_inf2;
+
+		tau_susc_Clh = para_current_arg.tau_susc;
+		nu_inf_Clh = para_current_arg.nu_inf;
+
+		beta_m_Clh = para_current_arg.beta_m;
+
+		n_Clh = para_other_arg.n;
+		kernel_type_Clh = para_other_arg.kernel_type;
+		coord_type_Clh = para_other_arg.coord_type;
+		t_max_Clh = para_other_arg.t_max;
+		unassigned_time_Clh = para_other_arg.unassigned_time;
+		np_Clh = para_other_arg.np;
+
+		n_base_Clh = para_other_arg.n_base;
+		n_seq_Clh = para_other_arg.n_seq;
+		n_iterations_Clh = para_other_arg.n_iterations;
+		n_frequ_Clh = para_other_arg.n_frequ;
+		n_output_source_Clh = para_other_arg.n_output_source;
+		n_output_gm_Clh = para_other_arg.n_output_gm;
+		n_cout_Clh = para_other_arg.n_cout;
+
+		coordinate_Clh = coordinate_arg;
+
+		xi_U_Clh = xi_U_arg;
+		xi_E_Clh = xi_E_arg;
+		xi_E_minus_Clh = xi_E_minus_arg;
+		xi_I_Clh = xi_I_arg;
+		xi_R_Clh = xi_R_arg;
+		xi_EnI_Clh = xi_EnI_arg;
+		xi_InR_Clh = xi_InR_arg;
+
+
+		t_e_Clh = t_e_arg;
+		t_i_Clh = t_i_arg;
+		t_r_Clh = t_r_arg;
+
+		index_Clh = index_arg;
+
+		infected_source_Clh = infected_source_arg;
+
+	}
+
+
+	void initialize_kernel_mat(vector< vector<double> >&, vector<double>&); // function prototype for initializing kernel distance  
+
+	void initialize_delta_mat(vector< vector<double> >&); // function prototype for initializing length of exposure time
+
+	void initialize_delta_mat_mov(vector< vector<double> >&, moves_struct& moves_arg); // function prototype for initializing length of exposure time for movements
+
+	void initialize_beta_ij_mat(vector< vector<double> >& beta_ij_mat_arg, vector<double>& herdn_arg, vector<double>& ftype0_arg, vector<double>& ftype1_arg, vector<double>& ftype2_arg);
+
+	void initialize_lh_square(lh_SQUARE& lh_square_arg, vector< vector<double> > kernel_mat_arg, vector< vector<double> > delta_mat_arg, vector<double>& norm_const_arg, nt_struct& nt_data_arg, vector<int>& con_seq, vector< vector<double> > beta_ij_mat_arg, moves_struct& moves_arg, para_priors_etc& para_priors_arg, vector< vector<double> > delta_mat_mov_arg);
+
 };
 
 //-----------------------------
 
 /*
- function mcmc update class
- private: don’t declare variables that need updating here or they can’t be changed in the mcmc only for constants
- */
+function mcmc update class
+private: don’t declare variables that need updating here or they can’t be changed in the mcmc only for constants
+*/
 
 class mcmc_UPDATE {
-  
+
 private:
-  
-  int n_CUPDATE, n_seq_CUPDATE, n_base_CUPDATE;
-  string kernel_type_CUPDATE, coord_type_CUPDATE;
-  double t_max_CUPDATE, unassigned_time_CUPDATE;
-  int np_CUPDATE;
-  double n_iterations_CUPDATE;
-  int n_frequ_CUPDATE, n_output_source_CUPDATE, n_output_gm_CUPDATE, n_cout_CUPDATE;
-  
-  vector<double> herdn_CUPDATE, ftype0_CUPDATE, ftype1_CUPDATE, ftype2_CUPDATE;
-  
-  vector< vector<double> > coordinate_CUPDATE;
-  
-  vector<int> index_CUPDATE;
-  
+
+	int n_CUPDATE, n_seq_CUPDATE, n_base_CUPDATE;
+	string kernel_type_CUPDATE, coord_type_CUPDATE;
+	double t_max_CUPDATE, unassigned_time_CUPDATE;
+	int np_CUPDATE;
+	double n_iterations_CUPDATE;
+	int n_frequ_CUPDATE, n_output_source_CUPDATE, n_output_gm_CUPDATE, n_cout_CUPDATE;
+
+	vector<double> herdn_CUPDATE, ftype0_CUPDATE, ftype1_CUPDATE, ftype2_CUPDATE;
+
+	vector< vector<double> > coordinate_CUPDATE;
+
+	vector<int> index_CUPDATE;
+
 public:
-  
-  void set_para (para_aux para_other_arg, vector< vector<double> > coordinate_arg, epi_struct epi_final_arg) {
-    
-    n_CUPDATE = para_other_arg.n;
-    kernel_type_CUPDATE = para_other_arg.kernel_type;
-    coord_type_CUPDATE = para_other_arg.coord_type;
-    t_max_CUPDATE = para_other_arg.t_max;
-    unassigned_time_CUPDATE = para_other_arg.unassigned_time;
-    np_CUPDATE = para_other_arg.np;
-    
-    n_base_CUPDATE = para_other_arg.n_base;
-    n_seq_CUPDATE = para_other_arg.n_seq;
-    n_iterations_CUPDATE = para_other_arg.n_iterations;
-    n_frequ_CUPDATE = para_other_arg.n_frequ;
-    n_output_source_CUPDATE = para_other_arg.n_output_source;
-    n_output_gm_CUPDATE = para_other_arg.n_output_gm;
-    n_cout_CUPDATE = para_other_arg.n_cout;
-    
-    herdn_CUPDATE = epi_final_arg.herdn;
-    ftype0_CUPDATE = epi_final_arg.ftype0;
-    ftype1_CUPDATE = epi_final_arg.ftype1;
-    ftype2_CUPDATE = epi_final_arg.ftype2;
-    
-    
-    coordinate_CUPDATE = coordinate_arg;
-    
-    n_base_CUPDATE = para_other_arg.n_base;
-    n_seq_CUPDATE = para_other_arg.n_seq;
-    
-  }
-  
+
+	void set_para(para_aux para_other_arg, vector< vector<double> > coordinate_arg, epi_struct epi_final_arg) {
+
+		n_CUPDATE = para_other_arg.n;
+		kernel_type_CUPDATE = para_other_arg.kernel_type;
+		coord_type_CUPDATE = para_other_arg.coord_type;
+		t_max_CUPDATE = para_other_arg.t_max;
+		unassigned_time_CUPDATE = para_other_arg.unassigned_time;
+		np_CUPDATE = para_other_arg.np;
+
+		n_base_CUPDATE = para_other_arg.n_base;
+		n_seq_CUPDATE = para_other_arg.n_seq;
+		n_iterations_CUPDATE = para_other_arg.n_iterations;
+		n_frequ_CUPDATE = para_other_arg.n_frequ;
+		n_output_source_CUPDATE = para_other_arg.n_output_source;
+		n_output_gm_CUPDATE = para_other_arg.n_output_gm;
+		n_cout_CUPDATE = para_other_arg.n_cout;
+
+		herdn_CUPDATE = epi_final_arg.herdn;
+		ftype0_CUPDATE = epi_final_arg.ftype0;
+		ftype1_CUPDATE = epi_final_arg.ftype1;
+		ftype2_CUPDATE = epi_final_arg.ftype2;
+
+
+		coordinate_CUPDATE = coordinate_arg;
+
+		n_base_CUPDATE = para_other_arg.n_base;
+		n_seq_CUPDATE = para_other_arg.n_seq;
+
+	}
+
 public:
-  
-  void alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_e_arg, const vector<double>& t_i_arg, const vector<double>& t_r_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg);
-  void beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<double>& t_e_arg, const vector<double>& t_i_arg, const vector<double>& t_r_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg);
-  
-  void c_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key& , para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
-  void d_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
-  
-  void k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  
-  void tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  void nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  void rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  void rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  void phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  void phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
-  
-  void beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, int iter, rng_type & rng_arg);
-  
-  void mu_1_update(lh_SQUARE& , double& ,  const vector<int>& , para_key& , nt_struct& , para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
-  void mu_2_update(lh_SQUARE& , double& ,  const vector<int>& , para_key& , nt_struct& , para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
-  
-  void p_ber_update (lh_SQUARE& , double& ,  const vector<int>& , para_key& , nt_struct& , vector<int>& ,vector<int>&, para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
-  
-  
-  void lat_mu_update(lh_SQUARE&, double&, const vector<int>&,  const vector<int>&,  const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
-  void lat_var_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
-  
-  void t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector< vector<double> >& kernel_mat_current_arg, vector< vector<double> >& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key& para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int& nt_current_arg, vec2d& t_nt_current_arg, vec2int& infecting_list_current_arg, const vector<int>& infecting_size_current_arg, vector<int>&  xi_beta_E_arg, vector<int>& con_seq, int& subject_proposed, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg, moves_struct& mov_arg); // jointly update the infection time and sequences
-  
-  //void source_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, int & subject_proposed, vector<int>& list_update, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, para_priors_etc& para_priors_arg, int iter, vector< vector<double> >& delta_mat_mov_current_arg);
-  
-  void source_t_e_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, int & subject_proposed, vector<int>& list_update, vector<int>& con_seq, para_priors_etc & para_priors_arg, para_scaling_factors & para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg);
-  
-  //void index_first_seq(lh_SQUARE&, double&, const vector< vector<double> >&, vector< vector<double> >&, vector<int>&, vector<int>&, vector<int>& , const vector<int>&, vector<int>&, const vector<double>&, const vector<double>&, vector<double>& , vector<int>&, const para_key&,  const vector<double>& , const vector<double>&, const vector<int>&, const vector<double>&, const vector<int>& , vec2int&, vec2d&,  vec2int&, const vector<int>&, vector<int>&, vector<int>&,int&, int,gsl_rng* &);
-  
-  
-  void t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector< vector<double> >& kernel_mat_current_arg, vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<int>& xi_EnI_arg, const vector<int>& xi_R_arg, const vector<int>& xi_InR_arg, const vector<double>& t_r_arg, vector<double>& t_i_arg, const vector<double>& t_onset_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, const para_key& para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int& nt_current_arg, vec2d& t_nt_current_arg, vec2int& infecting_list_current_arg, const vector<int>& infecting_size_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg, moves_struct& mov_arg);
-  void seq_n_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vector<int>& xi_beta_E_arg, const int & subject_proposed, rng_type & rng_arg); // update the whole seq
-  void index_first_seq(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, const vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, vector<int>& con_seq, int & subject_proposed, int iter, rng_type & rng_arg);
-  
-  void con_seq_update(lh_SQUARE& , double& , const vector< vector<double> >& , vector< vector<double> >& , vector<int>& , vector<int>& , vector<int>& , const vector<int>& , vector<int>& , const vector<double>& , const vector<double>& , vector<double>& , vector<int>& , const para_key& , const vector<double>& , const vector<int>& , const vector<double>& , const vector<int>& , vec2int& , vec2d& , vector<int>&  , vector<int>& , para_priors_etc& , para_scaling_factors& , int , rng_type & rng_arg); //
-  
-  void seq_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vector<int>& xi_beta_E_arg, vector<int>& con_seq, const int & subject_proposed, para_priors_etc & para_priors_arg, para_scaling_factors & para_sf_arg, int iter, rng_type & rng_arg);
-  
-  //
-  
+
+	void alpha_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_e_arg, const vector<double>& t_i_arg, const vector<double>& t_r_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg);
+	void beta_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<double>& t_e_arg, const vector<double>& t_i_arg, const vector<double>& t_r_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg);
+
+	void c_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
+	void d_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
+
+	void k_1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+
+	void tau_susc_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+	void nu_inf_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+	void rho_susc1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+	void rho_susc2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+	void phi_inf1_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+	void phi_inf2_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, vector< vector<double> >& kernel_mat_current_arg, const vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, para_key& para_current_arg, const vector<int>& infected_source_arg, vector<double>& norm_const_current_arg, vector< vector<double> >& beta_ij_mat_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector<double>& beta_ij_inf_current_arg, vector<double>& beta_ij_susc_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, const vector< vector<double> >& delta_mat_mov_current_arg);
+
+	void beta_m_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_minus_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, const vector<int>& infected_source_arg, para_key& para_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, int iter, rng_type & rng_arg);
+
+	void mu_1_update(lh_SQUARE&, double&, const vector<int>&, para_key&, nt_struct&, para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
+	void mu_2_update(lh_SQUARE&, double&, const vector<int>&, para_key&, nt_struct&, para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
+
+	void p_ber_update(lh_SQUARE&, double&, const vector<int>&, para_key&, nt_struct&, vector<int>&, vector<int>&, para_priors_etc&, para_scaling_factors&, int iter, rng_type & rng_arg);
+
+
+	void lat_mu_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
+	void lat_var_update(lh_SQUARE&, double&, const vector<int>&, const vector<int>&, const vector<double>&, const vector<double>&, const vector<int>&, para_key&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg);
+
+	void t_e_seq(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector< vector<double> >& kernel_mat_current_arg, vector< vector<double> >& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key& para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int& nt_current_arg, vec2d& t_nt_current_arg, vec2int& infecting_list_current_arg, const vector<int>& infecting_size_current_arg, vector<int>&  xi_beta_E_arg, vector<int>& con_seq, int& subject_proposed, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg, moves_struct& mov_arg); // jointly update the infection time and sequences
+
+	//void source_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, int & subject_proposed, vector<int>& list_update, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, para_priors_etc& para_priors_arg, int iter, vector< vector<double> >& delta_mat_mov_current_arg);
+
+	void source_t_e_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, int & subject_proposed, vector<int>& list_update, vector<int>& con_seq, para_priors_etc & para_priors_arg, para_scaling_factors & para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg);
+
+	//void index_first_seq(lh_SQUARE&, double&, const vector< vector<double> >&, vector< vector<double> >&, vector<int>&, vector<int>&, vector<int>& , const vector<int>&, vector<int>&, const vector<double>&, const vector<double>&, vector<double>& , vector<int>&, const para_key&,  const vector<double>& , const vector<double>&, const vector<int>&, const vector<double>&, const vector<int>& , vec2int&, vec2d&,  vec2int&, const vector<int>&, vector<int>&, vector<int>&,int&, int,gsl_rng* &);
+
+
+	void t_i_update(lh_SQUARE& lh_square_current_arg, double& log_lh_current_arg, const vector< vector<double> >& kernel_mat_current_arg, vector< vector<double> >& delta_mat_current_arg, const vector<int>& xi_U_arg, const vector<int>& xi_E_arg, const vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, const vector<int>& xi_EnI_arg, const vector<int>& xi_R_arg, const vector<int>& xi_InR_arg, const vector<double>& t_r_arg, vector<double>& t_i_arg, const vector<double>& t_onset_arg, const vector<double>& t_e_arg, const vector<int>& index_arg, const para_key& para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int& nt_current_arg, vec2d& t_nt_current_arg, vec2int& infecting_list_current_arg, const vector<int>& infecting_size_current_arg, para_priors_etc& para_priors_arg, para_scaling_factors& para_sf_arg, vector< vector<double> >& beta_ij_mat_current_arg, moves_struct& moves_arg, int iter, rng_type & rng_arg, vector< vector<double> >& delta_mat_mov_current_arg, moves_struct& mov_arg);
+	void seq_n_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vector<int>& xi_beta_E_arg, const int & subject_proposed, rng_type & rng_arg); // update the whole seq
+	void index_first_seq(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vec2int & infecting_list_current_arg, const vector<int>& infecting_size_current_arg, vector<int>& xi_beta_E_arg, vector<int>& con_seq, int & subject_proposed, int iter, rng_type & rng_arg);
+
+	void con_seq_update(lh_SQUARE&, double&, const vector< vector<double> >&, vector< vector<double> >&, vector<int>&, vector<int>&, vector<int>&, const vector<int>&, vector<int>&, const vector<double>&, const vector<double>&, vector<double>&, vector<int>&, const para_key&, const vector<double>&, const vector<int>&, const vector<double>&, const vector<int>&, vec2int&, vec2d&, vector<int>&, vector<int>&, para_priors_etc&, para_scaling_factors&, int, rng_type & rng_arg); //
+
+	void seq_update(lh_SQUARE & lh_square_current_arg, double & log_lh_current_arg, const vector<vector<double>>& kernel_mat_current_arg, vector<vector<double>>& delta_mat_current_arg, vector<int>& xi_U_arg, vector<int>& xi_E_arg, vector<int>& xi_E_minus_arg, const vector<int>& xi_I_arg, vector<int>& xi_EnI_arg, const vector<double>& t_r_arg, const vector<double>& t_i_arg, vector<double>& t_e_arg, vector<int>& index_arg, const para_key & para_current_arg, const vector<double>& norm_const_current_arg, const vector<int>& infected_source_current_arg, const vector<double>& t_sample_arg, const vector<int>& current_size_arg, vec2int & nt_current_arg, vec2d & t_nt_current_arg, vector<int>& xi_beta_E_arg, vector<int>& con_seq, const int & subject_proposed, para_priors_etc & para_priors_arg, para_scaling_factors & para_sf_arg, int iter, rng_type & rng_arg);
+
+	//
+
 };
 
 //--Function prototype declarations ---------------------------
 
-void count_type_all(nt_struct &, vector<int>&, int&, int& , int&, int& ); // count number of unchanged, transition, transversion (whole dataset)
+void count_type_all(nt_struct &, vector<int>&, int&, int&, int&, int&); // count number of unchanged, transition, transversion (whole dataset)
 
-void count_type_seq (vector<int>& , vector<int> , int&, int&, int& , int& );
+void count_type_seq(vector<int>&, vector<int>, int&, int&, int&, int&);
 
 //-----------------------------
 void IO_parapriorsetc(para_priors_etc&);
@@ -455,9 +456,9 @@ void IO_data(para_aux para_other_arg, vector < vector<double> >& coordinate_arg,
 
 void initialize_mcmc(para_key_init& para_init, para_key& para_current, para_aux& para_other, para_priors_etc& para_priors_etc, vector<int>& xi_I_current, vector<int>& xi_U_current, vector<int>& xi_E_current, vector<int>& xi_E_minus_current, vector<int>& xi_R_current, vector<int>& xi_EnI_current, vector<int>& xi_EnIS_current, vector<int>& xi_InR_current, vector<double>& t_e_current, vector<double>& t_i_current, vector<double>& t_r_current, vector<int>& index_current, vector<int>& infected_source_current, vector < vector<double> >& kernel_mat_current, vector <double>& norm_const_current, vec2int& sample_data, vector<double>& t_onset, nt_struct& nt_data_current, vector<int>& con_seq, vector < vector<double> >& beta_ij_mat_current);
 
-void seq_initialize_pair(nt_struct&, int , int, double, int, para_key&); // update sequences of infectious-infected pair
+void seq_initialize_pair(nt_struct&, int, int, double, int, para_key&); // update sequences of infectious-infected pair
 
-void delete_seq_samples(para_key& , para_aux&,  vector<int>&, vector<int>& , vector<int>&, vector<int>& , vector<int>&,  vector<int>& , vector<int>&, vector<int>&,  vector<double>& , vector<double>& , vector<double>&, vector<int>& ,  vector<double>& , vector<int>& , vector<int>& , vector < vector<double> >&, vector <double>&, vec2int&, vector<double>&, nt_struct& );
+void delete_seq_samples(para_key&, para_aux&, vector<int>&, vector<int>&, vector<int>&, vector<int>&, vector<int>&, vector<int>&, vector<int>&, vector<int>&, vector<double>&, vector<double>&, vector<double>&, vector<int>&, vector<double>&, vector<int>&, vector<int>&, vector < vector<double> >&, vector <double>&, vec2int&, vector<double>&, nt_struct&);
 
 double roundx(double x, int y);
 
